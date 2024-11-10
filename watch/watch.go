@@ -89,7 +89,7 @@ func (watch *Watch) fsUpdateHandle(event fsnotify.Event) {
 		}); err != nil {
 			panic(err)
 		}
-		slog.Debug("fsnotify.Create", "fileName", event.Name, "fileHash", fmt.Sprintf("%x", fileHash))
+		slog.Debug("fsnotify.Update", "fileName", event.Name, "fileHash", fmt.Sprintf("%x", fileHash))
 
 	case event.Has(fsnotify.Remove):
 		if err := watch.repo.Delete(repo.Criteria{
@@ -98,7 +98,7 @@ func (watch *Watch) fsUpdateHandle(event fsnotify.Event) {
 		}); err != nil {
 			panic(err)
 		}
-		slog.Debug("fsnotify.Create", "fileName", event.Name)
+		slog.Debug("fsnotify.Remove", "fileName", event.Name)
 
 	// TODO: some "deletion" ops may trigger fsnotify.Rename, like moving file in the trash
 	// TODO: this event also means that we need to re-attach the watcher, maybe?
