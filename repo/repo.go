@@ -137,13 +137,11 @@ func (repo *Repo) debugSelectAndPrint(opName string) {
 // TODO: deleteIfExists will only exist during prototyping and should never be used in prod
 func dbInit(db *sql.DB, deleteIfExists bool) error {
 	query := fmt.Sprintf(
-		`CREATE TABLE %s (
+		`CREATE TABLE IF NOT EXISTS %s (
 			id INTEGER NOT NULL PRIMARY KEY,
 			fs_name TEXT NOT NULL,
 			sha1 BLOB NOT NULL
-		) STRICT;
-		DELETE FROM %s;`,
-		tableName,
+		) STRICT;`,
 		tableName,
 	)
 	if deleteIfExists {
