@@ -89,7 +89,7 @@ func (watch *Watch) fsUpdateHandle(event fsnotify.Event) {
 		}); err != nil {
 			panic(err)
 		}
-		slog.Debug("fsnotify.Update", "fileName", event.Name, "fileHash", fmt.Sprintf("%x", fileHash))
+		slog.Debug("fsnotify.Write", "fileName", event.Name, "fileHash", fmt.Sprintf("%x", fileHash))
 
 	case event.Has(fsnotify.Remove):
 		if err := watch.repo.Delete(repo.Criteria{
