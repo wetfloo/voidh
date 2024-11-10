@@ -20,18 +20,21 @@ type Watch struct {
 }
 
 func New(repo repo.Repo, dir string) (Watch, error) {
+	var result Watch
+
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		return Watch{}, err
+		return result, err
 	}
 
 	if err := watcher.Add(dir); err != nil {
-		return Watch{}, err
+		return result, err
 	}
 
 	hasher := sha1.New()
 
-	return Watch{watcher, repo, hasher}, nil
+	result = Watch{watcher, repo, hasher}
+	return result, nil
 }
 
 func (watch *Watch) Start() error {
@@ -122,17 +125,20 @@ func (watch *Watch) fsUpdateHandle(event fsnotify.Event) {
 }
 
 func fileHashCalc(filePath string, hasher hash.Hash) ([]byte, error) {
+	var result []byte
+
 	file, err := os.Open(filePath)
 	if err != nil {
-		return []byte{}, err
+		return result, err
 	}
 	defer file.Close()
 
 	hasher.Reset()
 
 	if _, err := io.Copy(hasher, file); err != nil {
-		return []byte{}, err
+		return result, err
 	}
 
-	return hasher.Sum(nil), nil
+	result = hasher.Sum(nil)
+	return result, nil
 }

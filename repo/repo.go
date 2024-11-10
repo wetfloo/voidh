@@ -20,17 +20,19 @@ type Config struct {
 }
 
 func Init(cfg Config) (Repo, error) {
+	var result Repo
+
 	db, err := sql.Open("sqlite3", cfg.DatabasePath)
 	if err != nil {
-		return Repo{}, err
+		return result, err
 	}
 	if err := dbInit(db, cfg.RemoveIfExists); err != nil {
-		return Repo{}, err
+		return result, err
 	}
 
-	repo := Repo{db: db, debugSelections: cfg.DebugSelections}
-	repo.debugSelectAndPrint("init")
-	return repo, nil
+	result = Repo{db: db, debugSelections: cfg.DebugSelections}
+	result.debugSelectAndPrint("init")
+	return result, nil
 }
 
 func (repo *Repo) Close() {
