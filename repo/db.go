@@ -3,6 +3,8 @@ package repo
 import (
 	"database/sql"
 	"fmt"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 const tableName = "fs_file"
