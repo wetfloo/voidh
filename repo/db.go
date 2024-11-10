@@ -31,7 +31,12 @@ func (_ Hash) dbKey() string {
 }
 
 // TODO: deleteIfExists will only exist during prototyping and should never be used in prod
-func dbInit(db *sql.DB, deleteIfExists bool) error {
+func dbInit(databasePath string, deleteIfExists bool) (*sql.DB, error) {
+	db, err := sql.Open("sqlite3", databasePath)
+	if err != nil {
+		return db, err
+	}
+
 	query := fmt.Sprintf(
 		`CREATE TABLE IF NOT EXISTS %s (
 			id INTEGER NOT NULL PRIMARY KEY,
@@ -44,12 +49,11 @@ func dbInit(db *sql.DB, deleteIfExists bool) error {
 		query = fmt.Sprintf("DROP TABLE IF EXISTS %s;", tableName) + query
 	}
 
-	_, err := db.Exec(query)
-	if err != nil {
-		return err
+	if _, err := db.Exec(query); err != nil {
+		return db, err
 	}
 
-	return nil
+	return db, nil
 }
 
 func dbInteract(db *sql.DB, query string, args ...any) (sql.Result, error) {

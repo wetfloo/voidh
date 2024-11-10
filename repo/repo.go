@@ -22,11 +22,8 @@ type Config struct {
 func Init(cfg Config) (Repo, error) {
 	var result Repo
 
-	db, err := sql.Open("sqlite3", cfg.DatabasePath)
+	db, err := dbInit(cfg.DatabasePath, cfg.RemoveIfExists)
 	if err != nil {
-		return result, err
-	}
-	if err := dbInit(db, cfg.RemoveIfExists); err != nil {
 		return result, err
 	}
 
