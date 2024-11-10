@@ -13,6 +13,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+const debugSelections = true
 const tableName = "fs_file"
 
 func main() {
@@ -108,11 +109,14 @@ func fsUpdateHandle(event fsnotify.Event, hasher hash.Hash, db *sql.DB) {
 	}
 	// other events are do not change file structure, so no need to update the db
 
-	rows, err := db.Query(fmt.Sprintf("SELECT * FROM %s", tableName))
+	var rows *sql.Rows
+	var err error
+	if debugSelections {
+		rows, err = db.Query(fmt.Sprintf("SELECT * FROM %s", tableName))
+	}
 	if err != nil {
 		slog.Debug("can't display the result", "err", err)
-	}
-	if rows != nil {
+	} else if rows != nil {
 		for rows.Next() {
 			var id int
 			var fsPath string
@@ -122,7 +126,7 @@ func fsUpdateHandle(event fsnotify.Event, hasher hash.Hash, db *sql.DB) {
 				slog.Debug("can't display the result for row", "err", err)
 			}
 
-			slog.Debug("new db result", "id", id, "fsPath", fsPath, "sha1", sha1)
+			slog.Debug("new db result", "id", id, "fsPath", fsPath, "sha1", fmt.Sprintf("%x", sha1))
 		}
 
 		defer rows.Close()
@@ -187,4 +191,3 @@ func fileHashCalc(filePath string, hasher hash.Hash) ([]byte, error) {
 
 	return hasher.Sum(nil), nil
 }
-
