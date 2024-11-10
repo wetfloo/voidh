@@ -9,6 +9,27 @@ import (
 
 const tableName = "fs_file"
 
+type Criteria struct {
+	Key   Key
+	Value any
+}
+
+type Key interface {
+	dbKey() string
+}
+
+type Filename struct{}
+
+func (_ Filename) dbKey() string {
+	return "fs_name"
+}
+
+type Hash struct{}
+
+func (_ Hash) dbKey() string {
+	return "sha1"
+}
+
 // TODO: deleteIfExists will only exist during prototyping and should never be used in prod
 func dbInit(db *sql.DB, deleteIfExists bool) error {
 	query := fmt.Sprintf(

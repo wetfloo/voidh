@@ -6,32 +6,13 @@ import (
 	"log/slog"
 
 	"github.com/wetfloo/voidh/file"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type Repo struct {
 	db              *sql.DB
 	debugSelections bool
-}
-
-type Criteria struct {
-	Key   Key
-	Value any
-}
-
-type Key interface {
-	dbKey() string
-}
-
-type Filename struct{}
-
-func (_ Filename) dbKey() string {
-	return "fs_name"
-}
-
-type Hash struct{}
-
-func (_ Hash) dbKey() string {
-	return "sha1"
 }
 
 type Config struct {
