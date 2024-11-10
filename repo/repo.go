@@ -6,8 +6,6 @@ import (
 	"log/slog"
 
 	"github.com/wetfloo/voidh/file"
-
-	_ "github.com/mattn/go-sqlite3"
 )
 
 type Repo struct {
