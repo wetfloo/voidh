@@ -73,7 +73,7 @@ func fsUpdateHandle(event fsnotify.Event, hasher hash.Hash, db *sql.DB) {
 		if _, err := dbInteract(db, fmt.Sprintf("INSERT INTO %s(fs_name, sha1) VALUES(?, ?)", tableName), event.Name, fileHash); err != nil {
 			panic(err)
 		}
-		slog.Debug("fsnotify.Create", "fileName", event.Name, "fileHash", fileHash)
+		slog.Debug("fsnotify.Create", "fileName", event.Name, "fileHash", fmt.Sprintf("%x", fileHash))
 
 	// TODO: use debounce, since fsnotify.Write event doesn't mean it's done writing.
 	// Maybe timeout of 2 secs is good?
@@ -85,7 +85,7 @@ func fsUpdateHandle(event fsnotify.Event, hasher hash.Hash, db *sql.DB) {
 		if _, err := dbInteract(db, fmt.Sprintf("INSERT INTO %s(fs_name, sha1) VALUES(?, ?)", tableName), event.Name, fileHash); err != nil {
 			panic(err)
 		}
-		slog.Debug("fsnotify.Create", "fileName", event.Name, "fileHash", fileHash)
+		slog.Debug("fsnotify.Create", "fileName", event.Name, "fileHash", fmt.Sprintf("%x", fileHash))
 
 	case event.Has(fsnotify.Remove):
 		_, err := dbInteract(db, fmt.Sprintf("DELETE FROM %s WHERE fs_name = ?", tableName), event.Name)
@@ -104,7 +104,7 @@ func fsUpdateHandle(event fsnotify.Event, hasher hash.Hash, db *sql.DB) {
 		if _, err := dbInteract(db, fmt.Sprintf("UPDATE %s SET fs_name = ? WHERE sha1 = ?", tableName), event.Name, fileHash); err != nil {
 			panic(err)
 		}
-		slog.Debug("fsnotify.Rename", "fileName", event.Name, "fileHash", fileHash)
+		slog.Debug("fsnotify.Rename", "fileName", event.Name, "fileHash", fmt.Sprintf("%x", fileHash))
 	}
 	// other events are do not change file structure, so no need to update the db
 
@@ -172,18 +172,19 @@ func dbInteract(db *sql.DB, query string, args ...any) (sql.Result, error) {
 	return result, err
 }
 
-func fileHashCalc(filePath string, hasher hash.Hash) (string, error) {
+func fileHashCalc(filePath string, hasher hash.Hash) ([]byte, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
-		return "", err
+		return []byte{}, err
 	}
 	defer file.Close()
 
 	hasher.Reset()
 
 	if _, err := io.Copy(hasher, file); err != nil {
-		return "", err
+		return []byte{}, err
 	}
 
-	return string(hasher.Sum(nil)), nil
+	return hasher.Sum(nil), nil
 }
+
