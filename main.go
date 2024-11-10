@@ -134,7 +134,7 @@ func dbInit(db *sql.DB, deleteIfExists bool) {
 		`CREATE TABLE %s (
 			id INTEGER NOT NULL PRIMARY KEY,
 			fs_name TEXT NOT NULL,
-			sha1 TEXT NOT NULL
+			sha1 BLOB NOT NULL
 		);
 		DELETE FROM %s;`,
 		tableName,
