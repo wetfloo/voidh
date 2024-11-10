@@ -105,34 +105,35 @@ func (repo *Repo) Delete(criteria Criteria) error {
 }
 
 func (repo *Repo) debugSelectAndPrint(opName string) {
-	var rows *sql.Rows
-	var err error
-	if repo.debugSelections {
-		rows, err = repo.db.Query(fmt.Sprintf("SELECT * FROM %s", tableName))
+	if !repo.debugSelections {
+		return
 	}
+
+	rows, err := repo.db.Query(fmt.Sprintf("SELECT * FROM %s", tableName))
 	if err != nil {
 		slog.Debug("can't display the result", "err", err)
-	} else if rows != nil {
-		for rows.Next() {
-			var id int
-			var fsPath string
-			var sha1 string
+		return
+	}
 
-			if err = rows.Scan(&id, &fsPath, &sha1); err != nil {
-				slog.Debug("can't display the result for row", "err", err)
-			}
+	for rows.Next() {
+		var id int
+		var fsPath string
+		var sha1 string
 
-			slog.Debug(
-				"new db result",
-				"opName", opName,
-				"id", id,
-				"fsPath", fsPath,
-				"sha1", fmt.Sprintf("%x", sha1),
-			)
+		if err = rows.Scan(&id, &fsPath, &sha1); err != nil {
+			slog.Debug("can't display the result for row", "err", err)
 		}
 
-		defer rows.Close()
+		slog.Debug(
+			"new db result",
+			"opName", opName,
+			"id", id,
+			"fsPath", fsPath,
+			"sha1", fmt.Sprintf("%x", sha1),
+		)
 	}
+
+	defer rows.Close()
 }
 
 // TODO: deleteIfExists will only exist during prototyping and should never be used in prod
