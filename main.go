@@ -16,6 +16,7 @@ func main() {
 	repo, err := repo.Init(repo.Config{
 		DatabasePath:    "voidh.db",
 		DebugSelections: true,
+		RemoveIfExists:  true,
 	})
 	if err != nil {
 		panic(err)

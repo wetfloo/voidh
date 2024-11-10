@@ -41,6 +41,7 @@ func (_ Hash) dbKey() string {
 type Config struct {
 	DatabasePath    string
 	DebugSelections bool
+	RemoveIfExists  bool
 }
 
 func Init(cfg Config) (Repo, error) {
@@ -48,7 +49,7 @@ func Init(cfg Config) (Repo, error) {
 	if err != nil {
 		return Repo{}, err
 	}
-	if err := dbInit(db, true); err != nil {
+	if err := dbInit(db, cfg.RemoveIfExists); err != nil {
 		return Repo{}, err
 	}
 
