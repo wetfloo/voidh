@@ -24,4 +24,8 @@ go.work.sum
 # env file
 .env
 
+# Database
+*.db
+
+# OS-specific
 .DS_Store
