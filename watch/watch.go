@@ -59,7 +59,6 @@ func (watch *Watch) Stop() {
 
 func (watch *Watch) fsUpdateHandle(event fsnotify.Event) {
 	switch {
-	// TODO: for some reason this triggers twice on my (wetfloo's) machine
 	case event.Has(fsnotify.Create):
 		fileHash, err := fileHashCalc(event.Name, watch.hasher)
 		if err != nil {
