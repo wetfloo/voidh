@@ -112,6 +112,9 @@ func (header *header) attachExtendedHeader(input io.ByteReader) error {
 	if err != nil {
 		return err
 	}
+	if selfSize == 0 {
+		return nil
+	}
 	result.selfSize = selfSize
 
 	b, err := input.ReadByte()
@@ -145,6 +148,7 @@ func (header *header) attachExtendedHeader(input io.ByteReader) error {
 		}
 	}
 
+	header.extendedHeader = &result
 	return nil
 }
 
