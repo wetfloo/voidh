@@ -11,6 +11,7 @@ func FindBit(b byte, n uint64) bool {
 	return sb == (sb & b)
 }
 
+// Try to read uint32 from input, consuming 4 bytes
 func ReadUint32(input io.ByteReader) (uint32, error) {
 	var out [4]byte
 	for i, _ := range out {
