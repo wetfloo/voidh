@@ -98,8 +98,10 @@ func newHeader(input io.ByteScanner) (header, error) {
 		return result, fmt.Errorf("invalid tag size, expected max of %x, but got %x", tagSizeUpperBound, result.tagSize)
 	}
 
-	if err := result.attachExtendedHeader(input); err != nil {
-		return result, err
+	if result.flags.extendedHeaderPresent() {
+		if err := result.attachExtendedHeader(input); err != nil {
+			return result, err
+		}
 	}
 
 	return result, nil
@@ -112,8 +114,8 @@ func (header *header) attachExtendedHeader(input io.ByteReader) error {
 	if err != nil {
 		return err
 	}
-	if selfSize == 0 {
-		return nil
+	if selfSize < 6 {
+		return fmt.Errorf("invalid size of an extended header, must be at least 6 bytes, but is %d bytes instead", selfSize)
 	}
 	result.selfSize = selfSize
 
