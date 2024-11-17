@@ -21,10 +21,23 @@ type header struct {
 }
 
 type headerFlags struct {
-	footerPresent         bool
-	experimental          bool
-	extendedHeaderPresent bool
-	unsync                bool
+	raw byte
+}
+
+func (flags headerFlags) footerPresent() bool {
+	return util.FindBit(flags.raw, 4)
+}
+
+func (flags headerFlags) experimental() bool {
+	return util.FindBit(flags.raw, 5)
+}
+
+func (flags headerFlags) extendedHeaderPresent() bool {
+	return util.FindBit(flags.raw, 6)
+}
+
+func (flags headerFlags) unsync() bool {
+	return util.FindBit(flags.raw, 7)
 }
 
 func newHeader(input io.ByteScanner) (header, error) {
@@ -71,12 +84,7 @@ func newHeader(input io.ByteScanner) (header, error) {
 	if err != nil {
 		return result, err
 	}
-	result.flags = headerFlags{
-		footerPresent:         util.FindBit(b, 4),
-		experimental:          util.FindBit(b, 5),
-		extendedHeaderPresent: util.FindBit(b, 6),
-		unsync:                util.FindBit(b, 7),
-	}
+	result.flags = headerFlags{raw: b}
 
 	// Check tag size, 4 bytes
 	tagSize, err := util.ReadUint32(input)
