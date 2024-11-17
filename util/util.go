@@ -30,7 +30,7 @@ type ByteReaderCounter struct {
 	count uintptr
 }
 
-func WrapByteReaderWithCounter(br io.ByteReader) io.ByteReader {
+func WrapByteReaderWithCounter(br io.ByteReader) *ByteReaderCounter {
 	return &ByteReaderCounter{br: br}
 }
 
