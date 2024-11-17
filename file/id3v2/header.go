@@ -1,7 +1,6 @@
 package id3v2
 
 import (
-	"encoding/binary"
 	"fmt"
 	"github.com/wetfloo/voidh/file"
 	"github.com/wetfloo/voidh/util"
@@ -80,15 +79,12 @@ func newHeader(input io.ByteScanner) (header, error) {
 	}
 
 	// Check tag size, 4 bytes
-	var tagSize [4]byte
-	for i, _ := range tagSize {
-		b, err := input.ReadByte()
-		if err != nil {
-			return result, err
-		}
-		tagSize[i] = b
+	tagSize, err := util.ReadUint32(input)
+	if err != nil {
+		return result, err
 	}
-	result.tagSize = binary.BigEndian.Uint32(tagSize[:])
+	result.tagSize = tagSize
+
 	if result.tagSize > tagSizeUpperBound {
 		// TODO: update error type here?
 		return result, fmt.Errorf("invalid tag size, expected max of %x, but got %x", tagSizeUpperBound, result.tagSize)
@@ -102,17 +98,13 @@ func newHeader(input io.ByteScanner) (header, error) {
 }
 
 func (header *header) attachExtendedHeader(input io.ByteReader) error {
-	var selfSize [4]byte
 	var result extendedHeader
 
-	for i, _ := range selfSize {
-		b, err := input.ReadByte()
-		if err != nil {
-			return err
-		}
-		selfSize[i] = b
+	selfSize, err := util.ReadUint32(input)
+	if err != nil {
+		return err
 	}
-	result.selfSize = binary.BigEndian.Uint32(selfSize[:])
+	result.selfSize = selfSize
 
 	b, err := input.ReadByte()
 	if err != nil {
