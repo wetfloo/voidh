@@ -7,4 +7,8 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.24
 )
 
-require golang.org/x/sys v0.13.0 // indirect
+require (
+	github.com/bogem/id3v2/v2 v2.1.4 // indirect
+	golang.org/x/sys v0.13.0 // indirect
+	golang.org/x/text v0.3.8 // indirect
+)
