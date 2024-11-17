@@ -40,7 +40,7 @@ func (flags headerFlags) unsync() bool {
 	return util.FindBit(flags.raw, 7)
 }
 
-func newHeader(input io.ByteScanner) (header, error) {
+func newHeader(input io.ByteReader) (header, error) {
 	var result header
 
 	// Check the major id3 version. Should always be v2
