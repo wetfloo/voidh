@@ -6,6 +6,6 @@ type FsFile struct {
 }
 
 type AudioFile struct {
-	fsFile FsFile
+	fsFile          FsFile
 	audioStreamHash []byte
 }
