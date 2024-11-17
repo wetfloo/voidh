@@ -16,10 +16,10 @@ func TestHeaderParsingId3Err(t *testing.T) {
 	counter := util.WrapReaderWithCounter(reader)
 	_, err := newHeader(counter)
 
-	assert.NotNil(t, err)
-	e := err.(file.InvalidTag)
-	assert.EqualValues(t, 0, e.Offset)
-	assert.Equal(t, majorByteSeq[:], e.Expected)
-	assert.Equal(t, testDataErr[:3], e.Actual)
+	assert.Equal(t, err, file.InvalidTag{
+		Offset:   0,
+		Expected: majorByteSeq[:],
+		Actual:   testDataErr[:3],
+	})
 }
 
