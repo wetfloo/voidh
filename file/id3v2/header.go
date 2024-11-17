@@ -122,17 +122,17 @@ func (header *header) attachExtendedHeader(input io.ByteReader) error {
 
 	for i, b := range extFlags {
 		switch {
-		case util.FindBit(b, 5):
+		case util.FindBit(b, 4):
 			i += 1
 			result.flags = append(result.flags, restrictionsFlag{data: extFlags[i]})
-		case util.FindBit(b, 6):
+		case util.FindBit(b, 5):
 			var flag crcFlag
 			for j := 0; j < len(flag.data); j++ {
 				i += 1
 				flag.data[j] = extFlags[i]
 			}
 			result.flags = append(result.flags, flag)
-		case util.FindBit(b, 7):
+		case util.FindBit(b, 6):
 			result.flags = append(result.flags, updateFlag{})
 		}
 	}
