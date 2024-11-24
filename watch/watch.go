@@ -7,8 +7,11 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"strings"
+	"time"
 
 	"github.com/fsnotify/fsnotify"
+	debounce "github.com/wetfloo/go_debounce"
 	"github.com/wetfloo/voidh/file"
 	"github.com/wetfloo/voidh/repo"
 )
@@ -75,36 +78,42 @@ func (watch *Watch) fsUpdateHandle(event fsnotify.Event) {
 		}
 		slog.Debug("fsnotify.Create", "fileName", event.Name, "fileHash", fmt.Sprintf("%x", fileHash))
 
-	// TODO: use debounce, since fsnotify.Write event doesn't mean it's done writing.
-	// Maybe timeout of 2 secs is good?
 	case event.Has(fsnotify.Write):
-		fileHash, err := fileHashCalc(event.Name, watch.hasher)
-		if err != nil {
-			panic(err)
-		}
-		if err := watch.repo.Update(repo.Criteria{
-			Key:   repo.Filename{},
-			Value: fileHash,
-		}, file.FsFile{
-			Name: event.Name,
-			Hash: fileHash,
-		}); err != nil {
-			panic(err)
-		}
-		slog.Debug("fsnotify.Write", "fileName", event.Name, "fileHash", fmt.Sprintf("%x", fileHash))
+		debounce.New(2 * time.Second)(func() {
+			fileHash, err := fileHashCalc(event.Name, watch.hasher)
+			if err != nil {
+				panic(err)
+			}
+			if err := watch.repo.Update(repo.Criteria{
+				Key:   repo.Filename{},
+				Value: fileHash,
+			}, file.FsFile{
+				Name: event.Name,
+				Hash: fileHash,
+			}); err != nil {
+				panic(err)
+			}
+			slog.Debug("fsnotify.Write", "fileName", event.Name, "fileHash", fmt.Sprintf("%x", fileHash))
+		})
 
 	case event.Has(fsnotify.Remove):
-		if err := watch.repo.Delete(repo.Criteria{
-			Key:   repo.Filename{},
-			Value: event.Name,
-		}); err != nil {
+		if err := watch.fsFileForget(event.Name); err != nil {
 			panic(err)
 		}
 		slog.Debug("fsnotify.Remove", "fileName", event.Name)
 
-	// TODO: some "deletion" ops may trigger fsnotify.Rename, like moving file in the trash
 	// TODO: this event also means that we need to re-attach the watcher, maybe?
 	case event.Has(fsnotify.Rename):
+		// File is no longer on our path, forget about it (could happen if moved to a whole new location, for example)
+		// TODO: allow to watch for more than one path, this assumes there's only one
+		// TODO: does this expand to absolute path? If not, we should always do that
+		if !strings.HasPrefix(event.Name, watch.watcher.WatchList()[0]) {
+			if err := watch.fsFileForget(event.Name); err != nil {
+				panic(err)
+			}
+			return
+		}
+
 		fileHash, err := fileHashCalc(event.Name, watch.hasher)
 		if err != nil {
 			panic(err)
@@ -121,7 +130,17 @@ func (watch *Watch) fsUpdateHandle(event fsnotify.Event) {
 		slog.Debug("fsnotify.Rename", "fileName", event.Name, "fileHash", fmt.Sprintf("%x", fileHash))
 	}
 	// other events are do not change file structure, so no need to update the db
+}
 
+func (watch *Watch) fsFileForget(name string) error {
+	if err := watch.repo.Delete(repo.Criteria{
+		Key:   repo.Filename{},
+		Value: name,
+	}); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func fileHashCalc(filePath string, hasher hash.Hash) ([]byte, error) {
