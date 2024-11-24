@@ -10,8 +10,9 @@ import (
 func TestReadUint24(t *testing.T) {
 	b := [...]byte{0x40, 0xBB, 0xF4}
 	expected := uint32(4242420)
-	reader := bytes.NewReader(b[:])
+	reader := WrapReaderWithCounter(bytes.NewReader(b[:]))
 	actual, err := ReadUint24(reader)
 	assert.Nil(t, err)
 	assert.Equal(t, expected, actual)
+	assert.Equal(t, 3, reader.Count())
 }
