@@ -5,6 +5,7 @@ import (
 	"io"
 )
 
+// Try to read uint64 from input, consuming 8 bytes. Big endian
 func ReadUint64(input io.ByteReader) (uint64, error) {
 	var out [8]byte
 	for i, _ := range out {
@@ -54,6 +55,15 @@ func ReadUint16(input io.ByteReader) (uint16, error) {
 		out[i] = b
 	}
 	return binary.BigEndian.Uint16(out[:]), nil
+}
+
+// Try to read uint8 from input, consuming 1 byte. Big endian
+func ReadUint8(input io.ByteReader) (uint8, error) {
+	b, err := input.ReadByte()
+	if err != nil {
+		return 0, err
+	}
+	return uint8(b), nil
 }
 
 type Md5 struct {
