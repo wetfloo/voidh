@@ -15,7 +15,6 @@ func ReadUint32(input io.ByteReader) (uint32, error) {
 		}
 		out[i] = b
 	}
-
 	return binary.BigEndian.Uint32(out[:]), nil
 }
 
@@ -29,7 +28,6 @@ func ReadUint24(input io.ByteReader) (uint32, error) {
 		}
 		out[i+1] = b
 	}
-
 	return binary.BigEndian.Uint32(out[:]), nil
 }
 
