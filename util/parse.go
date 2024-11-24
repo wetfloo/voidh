@@ -5,7 +5,7 @@ import (
 	"io"
 )
 
-// Try to read uint32 from input, consuming 4 bytes
+// Try to read uint32 from input, consuming 4 bytes. Big endian
 func ReadUint32(input io.ByteReader) (uint32, error) {
 	var out [4]byte
 	for i, _ := range out {
@@ -19,7 +19,7 @@ func ReadUint32(input io.ByteReader) (uint32, error) {
 	return binary.BigEndian.Uint32(out[:]), nil
 }
 
-// Try to read uint24 from input, consuming 3 bytes
+// Try to read uint24 from input, consuming 3 bytes. Big endian
 func ReadUint24(input io.ByteReader) (uint32, error) {
 	var out [4]byte
 	for i, _ := range out[:len(out)-1] {
