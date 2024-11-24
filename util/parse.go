@@ -27,10 +27,10 @@ func ReadUint24(input io.ByteReader) (uint32, error) {
 		if err != nil {
 			return 0, err
 		}
-		out[i] = b
+		out[i+1] = b
 	}
 
-	return binary.BigEndian.Uint32(out[:]) >> 8, nil
+	return binary.BigEndian.Uint32(out[:]), nil
 }
 
 type Md5 struct {
