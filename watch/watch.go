@@ -107,7 +107,7 @@ func (watch *Watch) fsUpdateHandle(event fsnotify.Event) {
 		// File is no longer on our path, forget about it (could happen if moved to a whole new location, for example)
 		// TODO: allow to watch for more than one path, this assumes there's only one
 		// TODO: does this expand to absolute path? If not, we should always do that
-		if !strings.HasPrefix(event.Name, watch.watcher.WatchList()[0]) {
+		if hasPrefixEvenWithSurround(event.Name, "\"", watch.watcher.WatchList()[0]) {
 			if err := watch.fsFileForget(event.Name); err != nil {
 				panic(err)
 			}
@@ -160,4 +160,17 @@ func fileHashCalc(filePath string, hasher hash.Hash) ([]byte, error) {
 
 	result = hasher.Sum(nil)
 	return result, nil
+}
+
+// Checks if a given string has prefix, if not, tries to surround it
+// with a given string and tries again
+func hasPrefixEvenWithSurround(s string, sur string, prefix string) bool {
+	if strings.HasPrefix(s, prefix) {
+		return true
+	}
+	var builder strings.Builder
+	builder.WriteString(sur)
+	builder.WriteString(s)
+	builder.WriteString(sur)
+	return strings.HasPrefix(builder.String(), prefix)
 }
