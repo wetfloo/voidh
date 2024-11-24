@@ -39,7 +39,7 @@ func (repo *Repo) Close() {
 func (repo *Repo) Insert(file file.FsFile) error {
 	if _, err := dbInteract(
 		repo.db,
-		fmt.Sprintf("INSERT INTO %s(fs_name, sha1) VALUES(?, ?)", tableName),
+		"INSERT INTO fs_file(fs_name, sha1) VALUES(?, ?)",
 		file.Name,
 		file.Hash,
 	); err != nil {
@@ -53,7 +53,7 @@ func (repo *Repo) Insert(file file.FsFile) error {
 func (repo *Repo) Update(criteria Criteria, file file.FsFile) error {
 	if _, err := dbInteract(
 		repo.db,
-		fmt.Sprintf("UPDATE %s SET fs_name = ?, sha1 = ? WHERE %s = ?", tableName, criteria.Key.dbKey()),
+		fmt.Sprintf("UPDATE fs_file SET fs_name = ?, sha1 = ? WHERE %s = ?", criteria.Key.dbKey()),
 		file.Name,
 		file.Hash,
 		criteria.Value,
@@ -68,7 +68,7 @@ func (repo *Repo) Update(criteria Criteria, file file.FsFile) error {
 func (repo *Repo) Delete(criteria Criteria) error {
 	if _, err := dbInteract(
 		repo.db,
-		fmt.Sprintf("DELETE FROM %s WHERE %s = ?", tableName, criteria.Key.dbKey()),
+		fmt.Sprintf("DELETE FROM fs_file WHERE %s = ?", criteria.Key.dbKey()),
 		criteria.Value,
 	); err != nil {
 		return err
@@ -83,7 +83,7 @@ func (repo *Repo) debugSelectAndPrint(opName string) {
 		return
 	}
 
-	rows, err := repo.db.Query(fmt.Sprintf("SELECT * FROM %s", tableName))
+	rows, err := repo.db.Query("SELECT * FROM fs_file")
 	if err != nil {
 		slog.Debug("can't display the result", "err", err)
 		return

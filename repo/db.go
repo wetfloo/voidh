@@ -2,12 +2,16 @@ package repo
 
 import (
 	"database/sql"
-	"fmt"
 
+	_ "embed"
 	_ "github.com/mattn/go-sqlite3"
 )
 
-const tableName = "fs_file"
+//go:embed sql/fs_file/init.sql
+var initQuery string
+
+//go:embed sql/fs_file/drop_existing.sql
+var dropExistingQuery string
 
 type Criteria struct {
 	Key   Key
@@ -37,19 +41,13 @@ func dbInit(databasePath string, deleteIfExists bool) (*sql.DB, error) {
 		return db, err
 	}
 
-	query := fmt.Sprintf(
-		`CREATE TABLE IF NOT EXISTS %s (
-			id INTEGER NOT NULL PRIMARY KEY,
-			fs_name TEXT NOT NULL,
-			sha1 BLOB NOT NULL
-		) STRICT;`,
-		tableName,
-	)
 	if deleteIfExists {
-		query = fmt.Sprintf("DROP TABLE IF EXISTS %s;", tableName) + query
+		if _, err := db.Exec(dropExistingQuery); err != nil {
+			return db, err
+		}
 	}
 
-	if _, err := db.Exec(query); err != nil {
+	if _, err := db.Exec(initQuery); err != nil {
 		return db, err
 	}
 
