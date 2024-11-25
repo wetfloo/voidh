@@ -208,11 +208,11 @@ func readStreamInfo(input io.ByteReader) (streamInfo, error) {
 		return result, err
 	}
 
-	shifter := unpacker{}
-	result.sampleRate = uint32(shifter.unpack(num, 20))
-	result.channels = uint8(shifter.unpack(num, 3))
-	result.bitsPerSample = uint8(shifter.unpack(num, 5))
-	result.samplesTotal = shifter.unpack(num, 36)
+	unpacker := util.NewUnpacker()
+	result.sampleRate = uint32(unpacker.Unpack(num, 20))
+	result.channels = uint8(unpacker.Unpack(num, 3))
+	result.bitsPerSample = uint8(unpacker.Unpack(num, 5))
+	result.samplesTotal = unpacker.Unpack(num, 36)
 
 	var audioUnencHash [16]byte
 	for i := range audioUnencHash {
@@ -225,29 +225,6 @@ func readStreamInfo(input io.ByteReader) (streamInfo, error) {
 	result.audioUnencHash = util.Md5{Bytes: audioUnencHash}
 
 	return result, nil
-}
-
-type unpacker struct {
-	bitsCount uint
-}
-
-func (s *unpacker) reset() {
-	s.bitsCount = 0
-}
-
-func (s *unpacker) unpack(packed uint64, bitsCount uint) uint64 {
-	// handle overflows
-	if s.bitsCount+bitsCount < s.bitsCount {
-		return 0
-	}
-
-	mask := uint64(0)
-	for i := uint(0); i < bitsCount; i += 1 {
-		mask += (1 << (64 - 1 - i - s.bitsCount))
-	}
-	result := (mask & packed) >> (64 - bitsCount - s.bitsCount)
-	s.bitsCount += bitsCount
-	return result
 }
 
 func readApplication(input io.ByteReader, l uint32) (application, error) {
