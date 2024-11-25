@@ -141,7 +141,7 @@ func readMetadataBlock(input *bufio.Reader) (*metadataBlock, error) {
 		return nil, err
 	}
 
-	isLast := util.FindBit(b, 0)
+	isLast := util.FindBit(b, 7)
 	result.header.isLast = isLast
 
 	blockType := b & 0b0111_1111
@@ -323,7 +323,7 @@ func readCuesheet(input *bufio.Reader, l uint32) (cuesheet, error) {
 		if err != nil {
 			return result, err
 		}
-		result.isCompactDisc = util.FindBit(b, 0)
+		result.isCompactDisc = util.FindBit(b, 7)
 		i += 1
 
 		if _, err := input.Discard(258); err != nil {
