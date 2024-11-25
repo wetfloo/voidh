@@ -208,17 +208,11 @@ func readStreamInfo(input io.ByteReader) (streamInfo, error) {
 		return result, err
 	}
 
-	// only 20 bits for sample rate
-	shifter := shifter{toShift: 64}
-	sampleRateMask := shifter.shiftLeft(0xFF_FF_F, 20)
-	// then move according to spec
-	channelsMask := shifter.shiftLeft(0b111, 3)
-	bitsPerSampleMask := shifter.shiftLeft(channelsMask, 5)
-	samplesTotalMask := shifter.shiftLeft(bitsPerSampleMask, 36)
-	result.sampleRate = uint32(num & sampleRateMask)
-	result.channels = uint8(num & channelsMask)
-	result.bitsPerSample = uint8(num & bitsPerSampleMask)
-	result.samplesTotal = num & samplesTotalMask
+	shifter := unpacker{}
+	result.sampleRate = uint32(shifter.unpack(num, 20))
+	result.channels = uint8(shifter.unpack(num, 3))
+	result.bitsPerSample = uint8(shifter.unpack(num, 5))
+	result.samplesTotal = shifter.unpack(num, 36)
 
 	var audioUnencHash [16]byte
 	for i := range audioUnencHash {
@@ -233,22 +227,27 @@ func readStreamInfo(input io.ByteReader) (streamInfo, error) {
 	return result, nil
 }
 
-type shifter struct {
-	toShift int
+type unpacker struct {
+	bitsCount uint
 }
 
-func (s *shifter) shiftLeft(value uint64, amount int) uint64 {
-	if s.toShift <= 0 {
+func (s *unpacker) reset() {
+	s.bitsCount = 0
+}
+
+func (s *unpacker) unpack(packed uint64, bitsCount uint) uint64 {
+	// handle overflows
+	if s.bitsCount+bitsCount < s.bitsCount {
 		return 0
 	}
 
-	result := value << (s.toShift - amount)
-	s.toShift -= amount
+	mask := uint64(0)
+	for i := uint(0); i < bitsCount; i += 1 {
+		mask += (1 << (64 - 1 - i - s.bitsCount))
+	}
+	result := (mask & packed) >> (64 - bitsCount - s.bitsCount)
+	s.bitsCount += bitsCount
 	return result
-}
-
-func (s *shifter) reset() {
-	s.toShift = 0
 }
 
 func readApplication(input io.ByteReader, l uint32) (application, error) {
