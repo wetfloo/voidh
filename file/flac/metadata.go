@@ -4,12 +4,14 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/wetfloo/voidh/file"
 	"github.com/wetfloo/voidh/util"
 )
 
 type metadataBlockType byte
+type picType uint32
 
 const (
 	typeStreamInfo metadataBlockType = iota
@@ -20,6 +22,29 @@ const (
 	typeCuesheet
 	typePicture
 	typeInvalid = 127
+)
+
+const (
+	picTypeOther picType = iota
+	picTypeFileIcon
+	picTypeCoverFront
+	picTypeCoverBack
+	picTypeLeafletPage
+	picTypeMedia
+	picTypeLeadArtist
+	picTypeArtist
+	picTypeConductor
+	picTypeBandOrchestra
+	picTypeComposer
+	picTypeLyricist
+	picTypeRecordingLocation
+	picTypeDuringRecording
+	picTypeDuringPerformance
+	picTypeMovie
+	picTypeBrightFish
+	picTypeIllustration
+	picTypeBandLogo
+	picTypePublisherLogo
 )
 
 type metadata struct {
@@ -93,7 +118,7 @@ type cuesheetTrackIndex struct {
 }
 
 type picture struct {
-	picType     uint32
+	picType     picType
 	mimeType    string
 	desc        string
 	width       uint32
@@ -468,6 +493,92 @@ func readPicture(input io.ByteReader, l uint32) (util.ReadResult[picture], error
 			data: []byte{},
 		},
 	}
+
+	pictureType, err := util.ReadUint32(input)
+	if err != nil {
+		return result, err
+	}
+	result.AddReadBytes(4)
+	result.Value.picType = picType(pictureType)
+
+	mimeTypeLen, err := util.ReadUint32(input)
+	if err != nil {
+		return result, err
+	}
+	result.AddReadBytes(4)
+
+	var mimeType strings.Builder
+	for i := uint32(0); i < mimeTypeLen; i += 1 {
+		b, err := input.ReadByte()
+		if err != nil {
+			return result, err
+		}
+		mimeType.WriteByte(b)
+		result.AddReadBytes(1)
+	}
+	result.Value.mimeType = mimeType.String()
+
+	descLen, err := util.ReadUint32(input)
+	if err != nil {
+		return result, err
+	}
+	result.AddReadBytes(4)
+
+	var desc strings.Builder
+	for i := uint32(0); i < descLen; i += 1 {
+		b, err := input.ReadByte()
+		if err != nil {
+			return result, err
+		}
+		desc.WriteByte(b)
+		result.AddReadBytes(1)
+	}
+	result.Value.desc = desc.String()
+
+	width, err := util.ReadUint32(input)
+	if err != nil {
+		return result, err
+	}
+	result.AddReadBytes(4)
+	result.Value.width = width
+
+	height, err := util.ReadUint32(input)
+	if err != nil {
+		return result, err
+	}
+	result.AddReadBytes(4)
+	result.Value.height = height
+
+	colorDepth, err := util.ReadUint32(input)
+	if err != nil {
+		return result, err
+	}
+	result.AddReadBytes(4)
+	result.Value.colorDepth = colorDepth
+
+	colorsCount, err := util.ReadUint32(input)
+	if err != nil {
+		return result, err
+	}
+	result.AddReadBytes(4)
+	result.Value.colorsCount = colorsCount
+
+	dataLen, err := util.ReadUint32(input)
+	if err != nil {
+		return result, err
+	}
+	result.AddReadBytes(4)
+
+	for i := uint32(0); i < dataLen; i += 1 {
+		b, err := input.ReadByte()
+		if err != nil {
+			return result, err
+		}
+		result.Value.data = append(result.Value.data, b)
+		result.AddReadBytes(1)
+	}
+
+	result.AssertReadBytesEq(uint64(l))
 
 	return result, nil
 }
