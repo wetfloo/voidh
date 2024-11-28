@@ -3,25 +3,23 @@ package flac
 import (
 	"bufio"
 	"fmt"
+	"github.com/wetfloo/voidh/util"
 	"io"
 	"strings"
-
-	"github.com/wetfloo/voidh/file"
-	"github.com/wetfloo/voidh/util"
 )
 
 type metadataBlockType byte
 type picType uint32
 
 const (
-	typeStreamInfo metadataBlockType = iota
-	typePadding
-	typeApplication
-	typeSeekTable
-	typeVorbisComment
-	typeCuesheet
-	typePicture
-	typeInvalid = 127
+	metadataBlockTypeStreamInfo metadataBlockType = iota
+	metadataBlockTypePadding
+	metadataTypeApplication
+	metadataTypeSeekTable
+	metadataTypeVorbisComment
+	metadataTypeCuesheet
+	metadataTypePicture
+	metadataTypeInvalid = 127
 )
 
 const (
@@ -47,17 +45,12 @@ const (
 	picTypePublisherLogo
 )
 
-type metadata struct {
-	streamInfo streamInfo
-}
-
 type metadataBlock struct {
 	header metadataHeader
 	data   any
 }
 
 type metadataHeader struct {
-	isLast    bool
 	blockType metadataBlockType
 }
 
@@ -128,70 +121,45 @@ type picture struct {
 	data        []byte
 }
 
-func readMetadata(r io.Reader) (metadata, error) {
-	input := bufio.NewReader(r)
-	var result metadata
-	var fileHeader [4]byte
-
-	for i := range fileHeader {
-		b, err := input.ReadByte()
-		if err != nil {
-			return result, err
-		}
-		fileHeader[i] = b
-	}
-
-	var refFlacHeader = [...]byte{0x66, 0x4c, 0x61, 0x63}
-	if fileHeader != refFlacHeader {
-		return result, file.InvalidTag{
-			Offset:   0,
-			Expected: refFlacHeader[:],
-			Actual:   fileHeader[:],
-		}
-	}
-
-	return result, nil
-}
-
-func readMetadataBlock(input *bufio.Reader) (*metadataBlock, error) {
+func readMetadataBlock(input *bufio.Reader) (*metadataBlock, bool, error) {
 	var result metadataBlock
+	isLast := false
 	b, err := input.ReadByte()
 	if err != nil {
-		return nil, err
+		return nil, isLast, err
 	}
 
-	isLast := util.FindBit(b, 7)
-	result.header.isLast = isLast
+	isLast = util.FindBit(b, 7)
 
 	blockType := b & 0b0111_1111
 
 	metadataFollowLen, err := util.ReadUint24(input)
 	if err != nil {
-		return nil, err
+		return nil, isLast, err
 	}
 
 	switch blockType {
-	case byte(typeStreamInfo):
+	case byte(metadataBlockTypeStreamInfo):
 		readStreamInfo(input)
-	case byte(typePadding):
+	case byte(metadataBlockTypePadding):
 		if _, err := input.Discard(int(metadataFollowLen)); err != nil {
-			return nil, err
+			return nil, isLast, err
 		}
-	case byte(typeApplication):
+	case byte(metadataTypeApplication):
 		readApplication(input, metadataFollowLen)
-	case byte(typeSeekTable):
+	case byte(metadataTypeSeekTable):
 		readSeekTable(input, metadataFollowLen)
-	case byte(typeVorbisComment):
+	case byte(metadataTypeVorbisComment):
 		readVorbisComment(input, metadataFollowLen)
-	case byte(typeCuesheet):
+	case byte(metadataTypeCuesheet):
 		readCuesheet(input)
-	case byte(typePicture):
+	case byte(metadataTypePicture):
 		readPicture(input, metadataFollowLen)
-	case byte(typeInvalid):
-		return nil, fmt.Errorf("TODO: invalid metadata block")
+	case byte(metadataTypeInvalid):
+		return nil, isLast, fmt.Errorf("TODO: invalid metadata block")
 	}
 
-	return &result, nil
+	return &result, isLast, nil
 }
 
 func readStreamInfo(input io.ByteReader) (util.ReadResult[streamInfo], error) {
