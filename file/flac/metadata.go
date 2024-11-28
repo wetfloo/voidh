@@ -47,7 +47,7 @@ const (
 
 type MetadataBlock struct {
 	Header MetadataHeader
-	data   any
+	Data   any
 }
 
 type MetadataHeader struct {
