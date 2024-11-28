@@ -302,14 +302,13 @@ func readCuesheet(input *bufio.Reader, l uint32) (cuesheet, error) {
 		cuesheetTracks: []cuesheetTrack{},
 	}
 
-	for i := uint32(l); i < l; {
-		for j := 0; j < 128; j += 1 {
+	for i := uint32(0); i < l; /* we increment i manually in the loop */ {
+		for ; i < 128; i += 1 /* re-use i, reading 128 bytes */ {
 			b, err := input.ReadByte()
 			if err != nil {
 				return result, err
 			}
-			result.mediaCatalogNum[j] = b
-			i += 1
+			result.mediaCatalogNum[i] = b
 		}
 
 		leadInSamples, err := util.ReadUint64(input)
@@ -317,7 +316,7 @@ func readCuesheet(input *bufio.Reader, l uint32) (cuesheet, error) {
 			return result, err
 		}
 		result.leadInSamples = leadInSamples
-		i += 8
+		i += 8 // 64 bits
 
 		b, err := input.ReadByte()
 		if err != nil {
@@ -326,26 +325,54 @@ func readCuesheet(input *bufio.Reader, l uint32) (cuesheet, error) {
 		result.isCompactDisc = util.FindBit(b, 7)
 		i += 1
 
+		// reserved
+		// TODO: check that those 258 bytes are all zero
 		if _, err := input.Discard(258); err != nil {
 			return result, err
 		}
 
 		tracksNum, err := util.ReadUint8(input)
+		// TODO: check that tracksNum is >= 1
 		if err != nil {
 			return result, err
 		}
 		result.tracksNum = tracksNum
 		i += 1
 
-		// TODO: finish later, too sleepy now >.<
+		// TODO
 	}
 
 	return result, nil
 }
 
-func readCuesheetTrack(input *bufio.Scanner) (cuesheetTrack, error) {
+func readCuesheetTrack(input *bufio.Reader) (cuesheetTrack, error) {
+	// TODO
 	result := cuesheetTrack{
 		indicies: []cuesheetTrackIndex{},
+	}
+
+	return result, nil
+}
+
+// Reads total of 12 bytes, if successful
+func readCuesheetTrackIndex(input *bufio.Reader) (cuesheetTrackIndex, error) {
+	var result cuesheetTrackIndex
+
+	offset, err := util.ReadUint64(input)
+	if err != nil {
+		return result, err
+	}
+	result.offset = offset
+
+	indexPointNum, err := util.ReadUint8(input)
+	if err != nil {
+		return result, err
+	}
+	result.indexPointNum = indexPointNum
+
+	// TODO: assert all zeroes
+	if _, err := input.Discard(3); err != nil {
+		return result, err
 	}
 
 	return result, nil
