@@ -74,7 +74,6 @@ type cuesheet struct {
 	mediaCatalogNum [128]byte
 	leadInSamples   uint64
 	isCompactDisc   bool
-	tracksNum       uint8
 	cuesheetTracks  []cuesheetTrack
 }
 
@@ -176,43 +175,48 @@ func readMetadataBlock(input *bufio.Reader) (*metadataBlock, error) {
 	return &result, nil
 }
 
-func readStreamInfo(input io.ByteReader) (streamInfo, error) {
-	var result streamInfo
+func readStreamInfo(input io.ByteReader) (util.ReadResult[streamInfo], error) {
+	var result util.ReadResult[streamInfo]
 
 	minBlockSize, err := util.ReadUint16(input)
 	if err != nil {
 		return result, err
 	}
-	result.minBlockSize = minBlockSize
+	result.AddReadBytes(2)
+	result.Value.minBlockSize = minBlockSize
 
 	maxBlockSize, err := util.ReadUint16(input)
 	if err != nil {
 		return result, err
 	}
-	result.maxBlockSize = maxBlockSize
+	result.AddReadBytes(2)
+	result.Value.maxBlockSize = maxBlockSize
 
 	minFrameSize, err := util.ReadUint24(input)
 	if err != nil {
 		return result, err
 	}
-	result.minFrameSize = minFrameSize
+	result.AddReadBytes(3)
+	result.Value.minFrameSize = minFrameSize
 
 	maxFrameSize, err := util.ReadUint24(input)
 	if err != nil {
 		return result, err
 	}
-	result.maxFrameSize = maxFrameSize
+	result.AddReadBytes(3)
+	result.Value.maxFrameSize = maxFrameSize
 
 	num, err := util.ReadUint64(input)
 	if err != nil {
 		return result, err
 	}
+	result.AddReadBytes(8)
 
 	unpacker := util.NewUnpacker()
-	result.sampleRate = uint32(unpacker.Unpack(num, 20))
-	result.channels = uint8(unpacker.Unpack(num, 3))
-	result.bitsPerSample = uint8(unpacker.Unpack(num, 5))
-	result.samplesTotal = unpacker.Unpack(num, 36)
+	result.Value.sampleRate = uint32(unpacker.Unpack(num, 20))
+	result.Value.channels = uint8(unpacker.Unpack(num, 3))
+	result.Value.bitsPerSample = uint8(unpacker.Unpack(num, 5))
+	result.Value.samplesTotal = unpacker.Unpack(num, 36)
 
 	var audioUnencHash [16]byte
 	for i := range audioUnencHash {
@@ -222,133 +226,163 @@ func readStreamInfo(input io.ByteReader) (streamInfo, error) {
 		}
 		audioUnencHash[i] = b
 	}
-	result.audioUnencHash = util.Md5{Bytes: audioUnencHash}
+	result.AddReadBytes(16)
+	result.Value.audioUnencHash = util.Md5{Bytes: audioUnencHash}
+
+	result.AssertReadBytesEq(34)
 
 	return result, nil
 }
 
-func readApplication(input io.ByteReader, l uint32) (application, error) {
-	result := application{
-		appData: []byte{},
+func readApplication(input io.ByteReader, l uint32) (util.ReadResult[application], error) {
+	result := util.ReadResult[application]{
+		Value: application{
+			appData: []byte{},
+		},
 	}
 
 	appId, err := util.ReadUint32(input)
 	if err != nil {
 		return result, err
 	}
-	result.appId = appId
+	result.AddReadBytes(4)
+	result.Value.appId = appId
 
-	for i := uint32(0); i < l-2; i += 1 {
+	for result.ReadBytes() < uint64(l) {
 		b, err := input.ReadByte()
 		if err != nil {
 			return result, err
 		}
-		result.appData = append(result.appData, b)
+		result.AddReadBytes(1)
+		result.Value.appData = append(result.Value.appData, b)
 	}
+
+	result.AssertReadBytesEq(uint64(l))
 
 	return result, nil
 }
 
-func readSeekTable(input io.ByteReader, l uint32) (seekTable, error) {
-	result := seekTable{
-		seekPoints: []seekPoint{},
+func readSeekTable(input io.ByteReader, l uint32) (util.ReadResult[seekTable], error) {
+	result := util.ReadResult[seekTable]{
+		Value: seekTable{
+			seekPoints: []seekPoint{},
+		},
 	}
 
-	for i := uint32(0); i < l; {
+	for result.ReadBytes() < uint64(l) {
 		var point seekPoint
 		sampleNum, err := util.ReadUint64(input)
 		if err != nil {
 			return result, err
 		}
+		result.AddReadBytes(8)
 		point.sampleNum = sampleNum
-		i += 8
 
 		offset, err := util.ReadUint64(input)
 		if err != nil {
 			return result, err
 		}
+		result.AddReadBytes(8)
 		point.offset = offset
-		i += 8
 
 		targetFrameSampleCount, err := util.ReadUint16(input)
 		if err != nil {
 			return result, err
 		}
+		result.AddReadBytes(2)
 		point.targetFrameSampleCount = targetFrameSampleCount
-		i += 2
 	}
+
+	result.AssertReadBytesEq(uint64(l))
 
 	return result, nil
 }
 
-func readVorbisComment(input io.ByteReader, l uint32) (vorbisComment, error) {
-	result := vorbisComment{
-		bytes: []byte{},
+func readVorbisComment(input io.ByteReader, l uint32) (util.ReadResult[vorbisComment], error) {
+	result := util.ReadResult[vorbisComment]{
+		Value: vorbisComment{
+			bytes: []byte{},
+		},
 	}
 
-	for i := uint32(l); i < l; i += 1 {
+	for result.ReadBytes() < uint64(l) {
 		b, err := input.ReadByte()
 		if err != nil {
 			return result, err
 		}
-		result.bytes = append(result.bytes, b)
+		result.AddReadBytes(1)
+		result.Value.bytes = append(result.Value.bytes, b)
 	}
+
+	result.AssertReadBytesEq(uint64(l))
 
 	return result, nil
 }
 
-func readCuesheet(input *bufio.Reader, l uint32) (cuesheet, error) {
-	result := cuesheet{
-		cuesheetTracks: []cuesheetTrack{},
+func readCuesheet(input *bufio.Reader, l uint32) (util.ReadResult[cuesheet], error) {
+	result := util.ReadResult[cuesheet]{
+		Value: cuesheet{
+			cuesheetTracks: []cuesheetTrack{},
+		},
 	}
 
-	for i := uint32(0); i < l; /* we increment i manually in the loop */ {
-		for ; i < 128; i += 1 /* re-use i, reading 128 bytes */ {
-			b, err := input.ReadByte()
-			if err != nil {
-				return result, err
-			}
-			result.mediaCatalogNum[i] = b
-		}
-
-		leadInSamples, err := util.ReadUint64(input)
-		if err != nil {
-			return result, err
-		}
-		result.leadInSamples = leadInSamples
-		i += 8 // 64 bits
-
+	for i := range result.Value.mediaCatalogNum {
 		b, err := input.ReadByte()
 		if err != nil {
 			return result, err
 		}
-		result.isCompactDisc = util.FindBit(b, 7)
-		i += 1
+		result.AddReadBytes(1)
+		result.Value.mediaCatalogNum[i] = b
+	}
 
-		// reserved
-		// TODO: check that those 258 bytes are all zero
-		if _, err := input.Discard(258); err != nil {
-			return result, err
-		}
+	leadInSamples, err := util.ReadUint64(input)
+	if err != nil {
+		return result, err
+	}
+	result.AddReadBytes(8)
+	result.Value.leadInSamples = leadInSamples
 
-		tracksNum, err := util.ReadUint8(input)
-		// TODO: check that tracksNum is >= 1
+	b, err := input.ReadByte()
+	if err != nil {
+		return result, err
+	}
+	result.AddReadBytes(1)
+	result.Value.isCompactDisc = util.FindBit(b, 7)
+
+	// reserved
+	// TODO: check that those 258 bytes are all zero
+	if _, err := input.Discard(258); err != nil {
+		return result, err
+	}
+	result.AddReadBytes(258)
+
+	tracksNum, err := util.ReadUint8(input)
+	// TODO: check that tracksNum is >= 1
+	if err != nil {
+		return result, err
+	}
+	result.AddReadBytes(1)
+
+	for i := uint8(0); i < tracksNum; i += 1 {
+		cuesheetTrack, err := readCuesheetTrack(input)
 		if err != nil {
 			return result, err
 		}
-		result.tracksNum = tracksNum
-		i += 1
-
-		// TODO
+		result.AddReadBytes(cuesheetTrack.ReadBytes())
+		result.Value.cuesheetTracks = append(result.Value.cuesheetTracks, cuesheetTrack.Value)
 	}
+
+	result.AssertReadBytesEq(uint64(l))
 
 	return result, nil
 }
 
-func readCuesheetTrack(input *bufio.Reader) (cuesheetTrack, error) {
+func readCuesheetTrack(input *bufio.Reader) (util.ReadResult[cuesheetTrack], error) {
 	// TODO
-	result := cuesheetTrack{
-		indicies: []cuesheetTrackIndex{},
+	result := util.ReadResult[cuesheetTrack]{
+		Value: cuesheetTrack{
+			indicies: []cuesheetTrackIndex{},
+		},
 	}
 
 	return result, nil
@@ -378,11 +412,17 @@ func readCuesheetTrackIndex(input *bufio.Reader) (util.ReadResult[cuesheetTrackI
 	}
 	result.AddReadBytes(3)
 
+	result.AssertReadBytesEq(12)
+
 	return result, nil
 }
 
-func readPicture(input io.ByteReader, l uint32) (picture, error) {
-	var result picture
+func readPicture(input io.ByteReader, l uint32) (util.ReadResult[picture], error) {
+	result := util.ReadResult[picture]{
+		Value: picture{
+			data: []byte{},
+		},
+	}
 
 	return result, nil
 }
