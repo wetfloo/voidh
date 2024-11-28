@@ -34,7 +34,6 @@ type metadataBlock struct {
 type metadataHeader struct {
 	isLast    bool // TODO
 	blockType metadataBlockType
-	dataLen   uint32 // TODO
 }
 
 type streamInfo struct {
@@ -95,15 +94,12 @@ type cuesheetTrackIndex struct {
 
 type picture struct {
 	picType     uint32
-	mimeTypeLen uint32 // TODO
 	mimeType    string
-	descLen     uint32 // TODO
 	desc        string
 	width       uint32
 	height      uint32
 	colorDepth  uint32
 	colorsCount uint32
-	dataLen     uint32 // TODO
 	data        []byte
 }
 
@@ -148,7 +144,6 @@ func readMetadataBlock(input *bufio.Reader) (*metadataBlock, error) {
 	if err != nil {
 		return nil, err
 	}
-	result.header.dataLen = metadataFollowLen
 
 	switch blockType {
 	case byte(typeStreamInfo):
