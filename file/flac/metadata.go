@@ -355,25 +355,28 @@ func readCuesheetTrack(input *bufio.Reader) (cuesheetTrack, error) {
 }
 
 // Reads total of 12 bytes, if successful
-func readCuesheetTrackIndex(input *bufio.Reader) (cuesheetTrackIndex, error) {
-	var result cuesheetTrackIndex
+func readCuesheetTrackIndex(input *bufio.Reader) (util.ReadResult[cuesheetTrackIndex], error) {
+	var result util.ReadResult[cuesheetTrackIndex]
 
 	offset, err := util.ReadUint64(input)
 	if err != nil {
 		return result, err
 	}
-	result.offset = offset
+	result.AddReadBytes(8)
+	result.Value.offset = offset
 
 	indexPointNum, err := util.ReadUint8(input)
 	if err != nil {
 		return result, err
 	}
-	result.indexPointNum = indexPointNum
+	result.AddReadBytes(1)
+	result.Value.indexPointNum = indexPointNum
 
 	// TODO: assert all zeroes
 	if _, err := input.Discard(3); err != nil {
 		return result, err
 	}
+	result.AddReadBytes(3)
 
 	return result, nil
 }
