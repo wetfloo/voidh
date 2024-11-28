@@ -32,7 +32,7 @@ type metadataBlock struct {
 }
 
 type metadataHeader struct {
-	isLast    bool // TODO
+	isLast    bool
 	blockType metadataBlockType
 }
 
