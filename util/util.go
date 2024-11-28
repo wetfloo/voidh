@@ -8,5 +8,14 @@ func FindBit(b byte, n uint64) bool {
 
 type ReadResult[T any] struct {
 	Value     T
-	ReadBytes uint64
+	readBytes uint64
+}
+
+// Add the amount of read bytes to total amount
+func (r *ReadResult[any]) AddReadBytes(value uint64) {
+	r.readBytes += value
+}
+
+func (r *ReadResult[any]) ReadBytes() uint64 {
+	return r.readBytes
 }
