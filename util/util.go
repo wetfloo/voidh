@@ -1,5 +1,7 @@
 package util
 
+import "fmt"
+
 // Gets the n-th (0-indexed) bit out of Most Significant Bit byte
 func FindBit(b byte, n uint64) bool {
 	sb := byte(1 << n)
@@ -18,4 +20,10 @@ func (r *ReadResult[any]) AddReadBytes(value uint64) {
 
 func (r *ReadResult[any]) ReadBytes() uint64 {
 	return r.readBytes
+}
+
+func (r *ReadResult[any]) AssertReadBytesEq(l uint64) {
+	if l != r.readBytes {
+		panic(fmt.Sprintf("expected to have read %d, but read %d bytes instead", l, r.readBytes))
+	}
 }
