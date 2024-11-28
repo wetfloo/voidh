@@ -84,7 +84,6 @@ type cuesheetTrack struct {
 	isAudio     bool
 	preEmphasis bool
 	reserved    [14]byte
-	indexPoints uint8
 	indicies    []cuesheetTrackIndex
 }
 
@@ -165,7 +164,7 @@ func readMetadataBlock(input *bufio.Reader) (*metadataBlock, error) {
 	case byte(typeVorbisComment):
 		readVorbisComment(input, metadataFollowLen)
 	case byte(typeCuesheet):
-		readCuesheet(input, metadataFollowLen)
+		readCuesheet(input)
 	case byte(typePicture):
 		readPicture(input, metadataFollowLen)
 	case byte(typeInvalid):
@@ -319,7 +318,7 @@ func readVorbisComment(input io.ByteReader, l uint32) (util.ReadResult[vorbisCom
 	return result, nil
 }
 
-func readCuesheet(input *bufio.Reader, l uint32) (util.ReadResult[cuesheet], error) {
+func readCuesheet(input *bufio.Reader) (util.ReadResult[cuesheet], error) {
 	result := util.ReadResult[cuesheet]{
 		Value: cuesheet{
 			cuesheetTracks: []cuesheetTrack{},
@@ -363,6 +362,8 @@ func readCuesheet(input *bufio.Reader, l uint32) (util.ReadResult[cuesheet], err
 	}
 	result.AddReadBytes(1)
 
+	// 	result.AssertReadBytesEq(uint64(l)) // TODO
+
 	for i := uint8(0); i < tracksNum; i += 1 {
 		cuesheetTrack, err := readCuesheetTrack(input)
 		if err != nil {
@@ -372,17 +373,66 @@ func readCuesheet(input *bufio.Reader, l uint32) (util.ReadResult[cuesheet], err
 		result.Value.cuesheetTracks = append(result.Value.cuesheetTracks, cuesheetTrack.Value)
 	}
 
-	result.AssertReadBytesEq(uint64(l))
-
 	return result, nil
 }
 
 func readCuesheetTrack(input *bufio.Reader) (util.ReadResult[cuesheetTrack], error) {
-	// TODO
 	result := util.ReadResult[cuesheetTrack]{
 		Value: cuesheetTrack{
 			indicies: []cuesheetTrackIndex{},
 		},
+	}
+
+	offset, err := util.ReadUint64(input)
+	if err != nil {
+		return result, err
+	}
+	result.AddReadBytes(8)
+	result.Value.offset = offset
+
+	trackNum, err := util.ReadUint8(input)
+	if err != nil {
+		return result, err
+	}
+	result.AddReadBytes(1)
+	result.Value.trackNum = trackNum
+
+	var isrc [12]byte
+	for i := range isrc {
+		b, err := input.ReadByte()
+		if err != nil {
+			return result, err
+		}
+		result.AddReadBytes(1)
+		isrc[i] = b
+	}
+	result.Value.isrc = isrc
+
+	b, err := input.ReadByte()
+	if err != nil {
+		return result, err
+	}
+	result.AddReadBytes(1)
+	result.Value.isAudio = util.FindBit(b, 7)
+	result.Value.preEmphasis = util.FindBit(b, 6)
+
+	if _, err := input.Discard(13); err != nil {
+		return result, err
+	}
+
+	indexPointsNum, err := util.ReadUint8(input)
+	if err != nil {
+		return result, err
+	}
+	result.AddReadBytes(1)
+
+	for i := uint8(0); i < indexPointsNum; i += 1 {
+		index, err := readCuesheetTrackIndex(input)
+		if err != nil {
+			return result, err
+		}
+		result.AddReadBytes(index.ReadBytes())
+		result.Value.indicies = append(result.Value.indicies, index.Value)
 	}
 
 	return result, nil
