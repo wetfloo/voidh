@@ -1,5 +1,5 @@
 package flac
 
-type frame struct {
+type Frame struct {
 	// TODO
 }

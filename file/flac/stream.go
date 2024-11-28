@@ -7,17 +7,17 @@ import (
 	"github.com/wetfloo/voidh/file"
 )
 
-type stream struct {
-	metadata []metadataBlock
-	frames   []frame // TODO
+type Stream struct {
+	Metadata []MetadataBlock
+	Frames   []Frame // TODO
 }
 
-func readStream(r io.Reader) (stream, error) {
+func ReadStream(r io.Reader) (Stream, error) {
 	input := bufio.NewReader(r)
 
-	result := stream{
-		metadata: []metadataBlock{},
-		frames:   []frame{},
+	result := Stream{
+		Metadata: []MetadataBlock{},
+		Frames:   []Frame{},
 	}
 	var fileHeader [4]byte
 
@@ -43,7 +43,7 @@ func readStream(r io.Reader) (stream, error) {
 		if err != nil {
 			return result, err
 		}
-		result.metadata = append(result.metadata, *mb)
+		result.Metadata = append(result.Metadata, *mb)
 		if isLast {
 			break
 		}

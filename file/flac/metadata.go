@@ -8,93 +8,93 @@ import (
 	"strings"
 )
 
-type metadataBlockType byte
-type picType uint32
+type MetadataBlockType byte
+type PicType uint32
 
 const (
-	metadataBlockTypeStreamInfo metadataBlockType = iota
-	metadataBlockTypePadding
-	metadataTypeApplication
-	metadataTypeSeekTable
-	metadataTypeVorbisComment
-	metadataTypeCuesheet
-	metadataTypePicture
-	metadataTypeInvalid = 127
+	MetadataBlockTypeStreamInfo MetadataBlockType = iota
+	MetadataBlockTypePadding
+	MetadataTypeApplication
+	MetadataTypeSeekTable
+	MetadataTypeVorbisComment
+	MetadataTypeCuesheet
+	MetadataTypePicture
+	MetadataTypeInvalid = 127
 )
 
 const (
-	picTypeOther picType = iota
-	picTypeFileIcon
-	picTypeCoverFront
-	picTypeCoverBack
-	picTypeLeafletPage
-	picTypeMedia
-	picTypeLeadArtist
-	picTypeArtist
-	picTypeConductor
-	picTypeBandOrchestra
-	picTypeComposer
-	picTypeLyricist
-	picTypeRecordingLocation
-	picTypeDuringRecording
-	picTypeDuringPerformance
-	picTypeMovie
-	picTypeBrightFish
-	picTypeIllustration
-	picTypeBandLogo
-	picTypePublisherLogo
+	PicTypeOther PicType = iota
+	PicTypeFileIcon
+	PicTypeCoverFront
+	PicTypeCoverBack
+	PicTypeLeafletPage
+	PicTypeMedia
+	PicTypeLeadArtist
+	PicTypeArtist
+	PicTypeConductor
+	PicTypeBandOrchestra
+	PicTypeComposer
+	PicTypeLyricist
+	PicTypeRecordingLocation
+	PicTypeDuringRecording
+	PicTypeDuringPerformance
+	PicTypeMovie
+	PicTypeBrightFish
+	PicTypeIllustration
+	PicTypeBandLogo
+	PicTypePublisherLogo
 )
 
-type metadataBlock struct {
-	header metadataHeader
+type MetadataBlock struct {
+	Header MetadataHeader
 	data   any
 }
 
-type metadataHeader struct {
-	blockType metadataBlockType
+type MetadataHeader struct {
+	BlockType MetadataBlockType
 }
 
-type streamInfo struct {
-	minBlockSize   uint16
-	maxBlockSize   uint16
-	minFrameSize   uint32
-	maxFrameSize   uint32
-	sampleRate     uint32
-	channels       uint8
-	bitsPerSample  uint8
-	samplesTotal   uint64
-	audioUnencHash util.Md5
+type StreamInfo struct {
+	MinBlockSize   uint16
+	MaxBlockSize   uint16
+	MinFrameSize   uint32
+	MaxFrameSize   uint32
+	SampleRate     uint32
+	Channels       uint8
+	BitsPerSample  uint8
+	SamplesTotal   uint64
+	AudioUnencHash util.Md5
 }
 
-type application struct {
-	appId   uint32
-	appData []byte // TODO
+type Application struct {
+	AppId   uint32
+	AppData []byte // TODO
 }
 
 // The number of seek points is implied by the metadata header 'length' field, i.e. equal to length / 18.
-type seekTable struct {
-	seekPoints []seekPoint
+type SeekTable struct {
+	SeekPoints []SeekPoint
 }
 
-type seekPoint struct {
-	sampleNum              uint64
-	offset                 uint64
-	targetFrameSampleCount uint16
+type SeekPoint struct {
+	SampleNum              uint64
+	Offset                 uint64
+	TargetFrameSampleCount uint16
 }
 
-type vorbisComment struct {
-	bytes []byte // TODO
+type VorbisComment struct {
+	Bytes []byte // TODO
 }
 
-type cuesheet struct {
+type Cuesheet struct {
 	// TODO, says it's ascii readable, meaning that we could use utf-8 string here
-	mediaCatalogNum [128]byte
-	leadInSamples   uint64
-	isCompactDisc   bool
-	cuesheetTracks  []cuesheetTrack
+	MediaCatalogNum [128]byte
+	LeadInSamples   uint64
+	IsCompactDisc   bool
+	CuesheetTracks  []CuesheetTrack
 }
 
-type cuesheetTrack struct {
+type CuesheetTrack struct {
 	offset      uint64
 	trackNum    uint8
 	isrc        [12]byte
@@ -110,19 +110,19 @@ type cuesheetTrackIndex struct {
 	reserved      [3]byte
 }
 
-type picture struct {
-	picType     picType
-	mimeType    string
-	desc        string
-	width       uint32
-	height      uint32
-	colorDepth  uint32
-	colorsCount uint32
-	data        []byte
+type Picture struct {
+	PicType     PicType
+	MimeType    string
+	Desc        string
+	Width       uint32
+	Height      uint32
+	ColorDepth  uint32
+	ColorsCount uint32
+	Data        []byte
 }
 
-func readMetadataBlock(input *bufio.Reader) (*metadataBlock, bool, error) {
-	var result metadataBlock
+func readMetadataBlock(input *bufio.Reader) (*MetadataBlock, bool, error) {
+	var result MetadataBlock
 	isLast := false
 	b, err := input.ReadByte()
 	if err != nil {
@@ -139,59 +139,59 @@ func readMetadataBlock(input *bufio.Reader) (*metadataBlock, bool, error) {
 	}
 
 	switch blockType {
-	case byte(metadataBlockTypeStreamInfo):
+	case byte(MetadataBlockTypeStreamInfo):
 		readStreamInfo(input)
-	case byte(metadataBlockTypePadding):
+	case byte(MetadataBlockTypePadding):
 		if _, err := input.Discard(int(metadataFollowLen)); err != nil {
 			return nil, isLast, err
 		}
-	case byte(metadataTypeApplication):
+	case byte(MetadataTypeApplication):
 		readApplication(input, metadataFollowLen)
-	case byte(metadataTypeSeekTable):
+	case byte(MetadataTypeSeekTable):
 		readSeekTable(input, metadataFollowLen)
-	case byte(metadataTypeVorbisComment):
+	case byte(MetadataTypeVorbisComment):
 		readVorbisComment(input, metadataFollowLen)
-	case byte(metadataTypeCuesheet):
+	case byte(MetadataTypeCuesheet):
 		readCuesheet(input)
-	case byte(metadataTypePicture):
+	case byte(MetadataTypePicture):
 		readPicture(input, metadataFollowLen)
-	case byte(metadataTypeInvalid):
+	case byte(MetadataTypeInvalid):
 		return nil, isLast, fmt.Errorf("TODO: invalid metadata block")
 	}
 
 	return &result, isLast, nil
 }
 
-func readStreamInfo(input io.ByteReader) (util.ReadResult[streamInfo], error) {
-	var result util.ReadResult[streamInfo]
+func readStreamInfo(input io.ByteReader) (util.ReadResult[StreamInfo], error) {
+	var result util.ReadResult[StreamInfo]
 
 	minBlockSize, err := util.ReadUint16(input)
 	if err != nil {
 		return result, err
 	}
 	result.AddReadBytes(2)
-	result.Value.minBlockSize = minBlockSize
+	result.Value.MinBlockSize = minBlockSize
 
 	maxBlockSize, err := util.ReadUint16(input)
 	if err != nil {
 		return result, err
 	}
 	result.AddReadBytes(2)
-	result.Value.maxBlockSize = maxBlockSize
+	result.Value.MaxBlockSize = maxBlockSize
 
 	minFrameSize, err := util.ReadUint24(input)
 	if err != nil {
 		return result, err
 	}
 	result.AddReadBytes(3)
-	result.Value.minFrameSize = minFrameSize
+	result.Value.MinFrameSize = minFrameSize
 
 	maxFrameSize, err := util.ReadUint24(input)
 	if err != nil {
 		return result, err
 	}
 	result.AddReadBytes(3)
-	result.Value.maxFrameSize = maxFrameSize
+	result.Value.MaxFrameSize = maxFrameSize
 
 	num, err := util.ReadUint64(input)
 	if err != nil {
@@ -200,10 +200,10 @@ func readStreamInfo(input io.ByteReader) (util.ReadResult[streamInfo], error) {
 	result.AddReadBytes(8)
 
 	unpacker := util.NewUnpacker()
-	result.Value.sampleRate = uint32(unpacker.Unpack(num, 20))
-	result.Value.channels = uint8(unpacker.Unpack(num, 3))
-	result.Value.bitsPerSample = uint8(unpacker.Unpack(num, 5))
-	result.Value.samplesTotal = unpacker.Unpack(num, 36)
+	result.Value.SampleRate = uint32(unpacker.Unpack(num, 20))
+	result.Value.Channels = uint8(unpacker.Unpack(num, 3))
+	result.Value.BitsPerSample = uint8(unpacker.Unpack(num, 5))
+	result.Value.SamplesTotal = unpacker.Unpack(num, 36)
 
 	var audioUnencHash [16]byte
 	for i := range audioUnencHash {
@@ -214,17 +214,17 @@ func readStreamInfo(input io.ByteReader) (util.ReadResult[streamInfo], error) {
 		audioUnencHash[i] = b
 	}
 	result.AddReadBytes(16)
-	result.Value.audioUnencHash = util.Md5{Bytes: audioUnencHash}
+	result.Value.AudioUnencHash = util.Md5{Bytes: audioUnencHash}
 
 	result.AssertReadBytesEq(34)
 
 	return result, nil
 }
 
-func readApplication(input io.ByteReader, l uint32) (util.ReadResult[application], error) {
-	result := util.ReadResult[application]{
-		Value: application{
-			appData: []byte{},
+func readApplication(input io.ByteReader, l uint32) (util.ReadResult[Application], error) {
+	result := util.ReadResult[Application]{
+		Value: Application{
+			AppData: []byte{},
 		},
 	}
 
@@ -233,7 +233,7 @@ func readApplication(input io.ByteReader, l uint32) (util.ReadResult[application
 		return result, err
 	}
 	result.AddReadBytes(4)
-	result.Value.appId = appId
+	result.Value.AppId = appId
 
 	for result.ReadBytes() < uint64(l) {
 		b, err := input.ReadByte()
@@ -241,7 +241,7 @@ func readApplication(input io.ByteReader, l uint32) (util.ReadResult[application
 			return result, err
 		}
 		result.AddReadBytes(1)
-		result.Value.appData = append(result.Value.appData, b)
+		result.Value.AppData = append(result.Value.AppData, b)
 	}
 
 	result.AssertReadBytesEq(uint64(l))
@@ -249,35 +249,35 @@ func readApplication(input io.ByteReader, l uint32) (util.ReadResult[application
 	return result, nil
 }
 
-func readSeekTable(input io.ByteReader, l uint32) (util.ReadResult[seekTable], error) {
-	result := util.ReadResult[seekTable]{
-		Value: seekTable{
-			seekPoints: []seekPoint{},
+func readSeekTable(input io.ByteReader, l uint32) (util.ReadResult[SeekTable], error) {
+	result := util.ReadResult[SeekTable]{
+		Value: SeekTable{
+			SeekPoints: []SeekPoint{},
 		},
 	}
 
 	for result.ReadBytes() < uint64(l) {
-		var point seekPoint
+		var point SeekPoint
 		sampleNum, err := util.ReadUint64(input)
 		if err != nil {
 			return result, err
 		}
 		result.AddReadBytes(8)
-		point.sampleNum = sampleNum
+		point.SampleNum = sampleNum
 
 		offset, err := util.ReadUint64(input)
 		if err != nil {
 			return result, err
 		}
 		result.AddReadBytes(8)
-		point.offset = offset
+		point.Offset = offset
 
 		targetFrameSampleCount, err := util.ReadUint16(input)
 		if err != nil {
 			return result, err
 		}
 		result.AddReadBytes(2)
-		point.targetFrameSampleCount = targetFrameSampleCount
+		point.TargetFrameSampleCount = targetFrameSampleCount
 	}
 
 	result.AssertReadBytesEq(uint64(l))
@@ -285,10 +285,10 @@ func readSeekTable(input io.ByteReader, l uint32) (util.ReadResult[seekTable], e
 	return result, nil
 }
 
-func readVorbisComment(input io.ByteReader, l uint32) (util.ReadResult[vorbisComment], error) {
-	result := util.ReadResult[vorbisComment]{
-		Value: vorbisComment{
-			bytes: []byte{},
+func readVorbisComment(input io.ByteReader, l uint32) (util.ReadResult[VorbisComment], error) {
+	result := util.ReadResult[VorbisComment]{
+		Value: VorbisComment{
+			Bytes: []byte{},
 		},
 	}
 
@@ -298,7 +298,7 @@ func readVorbisComment(input io.ByteReader, l uint32) (util.ReadResult[vorbisCom
 			return result, err
 		}
 		result.AddReadBytes(1)
-		result.Value.bytes = append(result.Value.bytes, b)
+		result.Value.Bytes = append(result.Value.Bytes, b)
 	}
 
 	result.AssertReadBytesEq(uint64(l))
@@ -306,20 +306,20 @@ func readVorbisComment(input io.ByteReader, l uint32) (util.ReadResult[vorbisCom
 	return result, nil
 }
 
-func readCuesheet(input *bufio.Reader) (util.ReadResult[cuesheet], error) {
-	result := util.ReadResult[cuesheet]{
-		Value: cuesheet{
-			cuesheetTracks: []cuesheetTrack{},
+func readCuesheet(input *bufio.Reader) (util.ReadResult[Cuesheet], error) {
+	result := util.ReadResult[Cuesheet]{
+		Value: Cuesheet{
+			CuesheetTracks: []CuesheetTrack{},
 		},
 	}
 
-	for i := range result.Value.mediaCatalogNum {
+	for i := range result.Value.MediaCatalogNum {
 		b, err := input.ReadByte()
 		if err != nil {
 			return result, err
 		}
 		result.AddReadBytes(1)
-		result.Value.mediaCatalogNum[i] = b
+		result.Value.MediaCatalogNum[i] = b
 	}
 
 	leadInSamples, err := util.ReadUint64(input)
@@ -327,14 +327,14 @@ func readCuesheet(input *bufio.Reader) (util.ReadResult[cuesheet], error) {
 		return result, err
 	}
 	result.AddReadBytes(8)
-	result.Value.leadInSamples = leadInSamples
+	result.Value.LeadInSamples = leadInSamples
 
 	b, err := input.ReadByte()
 	if err != nil {
 		return result, err
 	}
 	result.AddReadBytes(1)
-	result.Value.isCompactDisc = util.FindBit(b, 7)
+	result.Value.IsCompactDisc = util.FindBit(b, 7)
 
 	// reserved
 	// TODO: check that those 258 bytes are all zero
@@ -358,15 +358,15 @@ func readCuesheet(input *bufio.Reader) (util.ReadResult[cuesheet], error) {
 			return result, err
 		}
 		result.AddReadBytes(cuesheetTrack.ReadBytes())
-		result.Value.cuesheetTracks = append(result.Value.cuesheetTracks, cuesheetTrack.Value)
+		result.Value.CuesheetTracks = append(result.Value.CuesheetTracks, cuesheetTrack.Value)
 	}
 
 	return result, nil
 }
 
-func readCuesheetTrack(input *bufio.Reader) (util.ReadResult[cuesheetTrack], error) {
-	result := util.ReadResult[cuesheetTrack]{
-		Value: cuesheetTrack{
+func readCuesheetTrack(input *bufio.Reader) (util.ReadResult[CuesheetTrack], error) {
+	result := util.ReadResult[CuesheetTrack]{
+		Value: CuesheetTrack{
 			indicies: []cuesheetTrackIndex{},
 		},
 	}
@@ -455,10 +455,10 @@ func readCuesheetTrackIndex(input *bufio.Reader) (util.ReadResult[cuesheetTrackI
 	return result, nil
 }
 
-func readPicture(input io.ByteReader, l uint32) (util.ReadResult[picture], error) {
-	result := util.ReadResult[picture]{
-		Value: picture{
-			data: []byte{},
+func readPicture(input io.ByteReader, l uint32) (util.ReadResult[Picture], error) {
+	result := util.ReadResult[Picture]{
+		Value: Picture{
+			Data: []byte{},
 		},
 	}
 
@@ -467,7 +467,7 @@ func readPicture(input io.ByteReader, l uint32) (util.ReadResult[picture], error
 		return result, err
 	}
 	result.AddReadBytes(4)
-	result.Value.picType = picType(pictureType)
+	result.Value.PicType = PicType(pictureType)
 
 	mimeTypeLen, err := util.ReadUint32(input)
 	if err != nil {
@@ -484,7 +484,7 @@ func readPicture(input io.ByteReader, l uint32) (util.ReadResult[picture], error
 		mimeType.WriteByte(b)
 		result.AddReadBytes(1)
 	}
-	result.Value.mimeType = mimeType.String()
+	result.Value.MimeType = mimeType.String()
 
 	descLen, err := util.ReadUint32(input)
 	if err != nil {
@@ -501,35 +501,35 @@ func readPicture(input io.ByteReader, l uint32) (util.ReadResult[picture], error
 		desc.WriteByte(b)
 		result.AddReadBytes(1)
 	}
-	result.Value.desc = desc.String()
+	result.Value.Desc = desc.String()
 
 	width, err := util.ReadUint32(input)
 	if err != nil {
 		return result, err
 	}
 	result.AddReadBytes(4)
-	result.Value.width = width
+	result.Value.Width = width
 
 	height, err := util.ReadUint32(input)
 	if err != nil {
 		return result, err
 	}
 	result.AddReadBytes(4)
-	result.Value.height = height
+	result.Value.Height = height
 
 	colorDepth, err := util.ReadUint32(input)
 	if err != nil {
 		return result, err
 	}
 	result.AddReadBytes(4)
-	result.Value.colorDepth = colorDepth
+	result.Value.ColorDepth = colorDepth
 
 	colorsCount, err := util.ReadUint32(input)
 	if err != nil {
 		return result, err
 	}
 	result.AddReadBytes(4)
-	result.Value.colorsCount = colorsCount
+	result.Value.ColorsCount = colorsCount
 
 	dataLen, err := util.ReadUint32(input)
 	if err != nil {
@@ -542,7 +542,7 @@ func readPicture(input io.ByteReader, l uint32) (util.ReadResult[picture], error
 		if err != nil {
 			return result, err
 		}
-		result.Value.data = append(result.Value.data, b)
+		result.Value.Data = append(result.Value.Data, b)
 		result.AddReadBytes(1)
 	}
 
