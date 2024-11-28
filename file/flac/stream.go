@@ -29,7 +29,7 @@ func ReadStream(r io.Reader) (Stream, error) {
 		fileHeader[i] = b
 	}
 
-	var refFlacHeader = [...]byte{0x66, 0x4c, 0x61, 0x63}
+	var refFlacHeader = [...]byte{0x66, 0x4c, 0x61, 0x43}
 	if fileHeader != refFlacHeader {
 		return result, file.InvalidTag{
 			Offset:   0,
