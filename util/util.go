@@ -5,3 +5,8 @@ func FindBit(b byte, n uint64) bool {
 	sb := byte(1 << n)
 	return sb == (sb & b)
 }
+
+type ReadResult[T any] struct {
+	Value     T
+	ReadBytes uint64
+}
