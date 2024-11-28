@@ -100,14 +100,12 @@ type CuesheetTrack struct {
 	isrc        [12]byte
 	isAudio     bool
 	preEmphasis bool
-	reserved    [14]byte
 	indicies    []cuesheetTrackIndex
 }
 
 type cuesheetTrackIndex struct {
 	offset        uint64
 	indexPointNum uint8
-	reserved      [3]byte
 }
 
 type Picture struct {
