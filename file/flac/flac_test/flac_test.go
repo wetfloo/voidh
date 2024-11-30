@@ -45,12 +45,16 @@ func TestDataSubset56JpgPicture(t *testing.T) {
 	assert.Nil(t, err)
 
 	assert.GreaterOrEqual(t, len(stream.Metadata), 2) // one for StreamInfo, one for Picture
+	if (len(stream.Metadata)) > 0 {
+		assert.IsType(t, flac.StreamInfo{}, stream.Metadata[0])
+	}
+
 	for _, block := range stream.Metadata {
 		switch v := block.(type) {
 		case flac.StreamInfo:
 			assert.EqualValues(t, 44100, v.SampleRate)
-			assert.EqualValues(t, 16, v.BitsPerSample + 1)
-			assert.EqualValues(t, 2, v.Channels + 1)
+			assert.EqualValues(t, 16, v.BitsPerSample+1)
+			assert.EqualValues(t, 2, v.Channels+1)
 		case flac.Picture:
 			assert.Equal(t, flac.PicTypeCoverBack, v.PicType)
 			assert.Equal(t, "image/jpeg", v.MimeType)
