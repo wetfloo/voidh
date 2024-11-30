@@ -8,7 +8,7 @@ import (
 )
 
 type Stream struct {
-	Metadata []MetadataBlock
+	Metadata []any
 	Frames   []Frame // TODO
 }
 
@@ -16,7 +16,7 @@ func ReadStream(r io.Reader) (Stream, error) {
 	input := bufio.NewReader(r)
 
 	result := Stream{
-		Metadata: []MetadataBlock{},
+		Metadata: []any{},
 		Frames:   []Frame{},
 	}
 	var fileHeader [4]byte
@@ -43,7 +43,9 @@ func ReadStream(r io.Reader) (Stream, error) {
 		if err != nil {
 			return result, err
 		}
-		result.Metadata = append(result.Metadata, *mb)
+		if mb != nil {
+			result.Metadata = append(result.Metadata, mb)
+		}
 		if isLast {
 			break
 		}

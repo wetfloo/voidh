@@ -45,15 +45,6 @@ const (
 	PicTypePublisherLogo
 )
 
-type MetadataBlock struct {
-	Header MetadataHeader
-	Data   any
-}
-
-type MetadataHeader struct {
-	BlockType MetadataBlockType
-}
-
 type StreamInfo struct {
 	MinBlockSize   uint16
 	MaxBlockSize   uint16
@@ -119,9 +110,9 @@ type Picture struct {
 	Data        []byte
 }
 
-func readMetadataBlock(input *bufio.Reader) (*MetadataBlock, bool, error) {
-	var result MetadataBlock
+func readMetadataBlock(input *bufio.Reader) (any, bool, error) {
 	isLast := false
+
 	b, err := input.ReadByte()
 	if err != nil {
 		return nil, isLast, err
@@ -138,26 +129,56 @@ func readMetadataBlock(input *bufio.Reader) (*MetadataBlock, bool, error) {
 
 	switch blockType {
 	case byte(MetadataBlockTypeStreamInfo):
-		readStreamInfo(input)
+		result, err := readStreamInfo(input)
+		if err != nil {
+			return nil, isLast, err
+		}
+		result.AssertReadBytesEq(uint64(metadataFollowLen))
+		return result.Value, isLast, err
 	case byte(MetadataBlockTypePadding):
 		if _, err := input.Discard(int(metadataFollowLen)); err != nil {
 			return nil, isLast, err
 		}
 	case byte(MetadataTypeApplication):
-		readApplication(input, metadataFollowLen)
+		result, err := readApplication(input, metadataFollowLen)
+		if err != nil {
+			return nil, isLast, err
+		}
+		result.AssertReadBytesEq(uint64(metadataFollowLen))
+		return result.Value, isLast, err
 	case byte(MetadataTypeSeekTable):
-		readSeekTable(input, metadataFollowLen)
+		result, err := readSeekTable(input, metadataFollowLen)
+		if err != nil {
+			return nil, isLast, err
+		}
+		result.AssertReadBytesEq(uint64(metadataFollowLen))
+		return result.Value, isLast, err
 	case byte(MetadataTypeVorbisComment):
-		readVorbisComment(input, metadataFollowLen)
+		result, err := readVorbisComment(input, metadataFollowLen)
+		if err != nil {
+			return nil, isLast, err
+		}
+		result.AssertReadBytesEq(uint64(metadataFollowLen))
+		return result.Value, isLast, err
 	case byte(MetadataTypeCuesheet):
-		readCuesheet(input)
+		result, err := readCuesheet(input)
+		if err != nil {
+			return nil, isLast, err
+		}
+		result.AssertReadBytesEq(uint64(metadataFollowLen))
+		return result.Value, isLast, err
 	case byte(MetadataTypePicture):
-		readPicture(input, metadataFollowLen)
+		result, err := readPicture(input, metadataFollowLen)
+		if err != nil {
+			return nil, isLast, err
+		}
+		result.AssertReadBytesEq(uint64(metadataFollowLen))
+		return result.Value, isLast, err
 	case byte(MetadataTypeInvalid):
 		return nil, isLast, fmt.Errorf("TODO: invalid metadata block")
 	}
 
-	return &result, isLast, nil
+	return nil, isLast, nil
 }
 
 func readStreamInfo(input io.ByteReader) (util.ReadResult[StreamInfo], error) {
@@ -405,6 +426,7 @@ func readCuesheetTrack(input *bufio.Reader) (util.ReadResult[CuesheetTrack], err
 	if _, err := input.Discard(13); err != nil {
 		return result, err
 	}
+	result.AddReadBytes(13)
 
 	indexPointsNum, err := util.ReadUint8(input)
 	if err != nil {
