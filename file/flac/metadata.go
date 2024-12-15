@@ -78,8 +78,7 @@ type VorbisComment struct {
 }
 
 type Cuesheet struct {
-	// TODO, says it's ascii readable, meaning that we could use utf-8 string here
-	MediaCatalogNum [128]byte
+	MediaCatalogNum string
 	LeadInSamples   uint64
 	IsCompactDisc   bool
 	CuesheetTracks  []CuesheetTrack
@@ -332,14 +331,16 @@ func readCuesheet(input *bufio.Reader) (util.ReadResult[Cuesheet], error) {
 		},
 	}
 
-	for i := range result.Value.MediaCatalogNum {
+	var mediaCatalogNum strings.Builder
+	for i := 0; i < 128; i += 1 {
 		b, err := input.ReadByte()
 		if err != nil {
 			return result, err
 		}
 		result.AddReadBytes(1)
-		result.Value.MediaCatalogNum[i] = b
+		mediaCatalogNum.WriteByte(b)
 	}
+	result.Value.MediaCatalogNum = mediaCatalogNum.String()
 
 	leadInSamples, err := util.ReadUint64(input)
 	if err != nil {
