@@ -72,7 +72,7 @@ type StreamInfo struct {
 	Channels       uint8
 	BitsPerSample  uint8
 	SamplesTotal   uint64
-	AudioUnencHash util.Md5
+	AudioUnencHash [16]byte
 }
 
 type Application struct {
@@ -246,16 +246,14 @@ func readStreamInfo(input io.ByteReader) (util.ReadResult[StreamInfo], error) {
 	result.Value.BitsPerSample = uint8(unpacker.Unpack(num, 5))
 	result.Value.SamplesTotal = unpacker.Unpack(num, 36)
 
-	var audioUnencHash [16]byte
-	for i := range audioUnencHash {
+	for i := range result.Value.AudioUnencHash {
 		b, err := input.ReadByte()
 		if err != nil {
 			return result, err
 		}
-		audioUnencHash[i] = b
+		result.AddReadBytes(1)
+		result.Value.AudioUnencHash[i] = b
 	}
-	result.AddReadBytes(16)
-	result.Value.AudioUnencHash = util.Md5{Bytes: audioUnencHash}
 
 	result.AssertReadBytesEq(34)
 

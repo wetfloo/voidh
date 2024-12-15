@@ -78,7 +78,3 @@ func ReadUint8(input io.ByteReader) (uint8, error) {
 	}
 	return uint8(b), nil
 }
-
-type Md5 struct {
-	Bytes [16]byte
-}
