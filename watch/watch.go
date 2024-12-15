@@ -2,7 +2,7 @@ package watch
 
 import (
 	"crypto/sha1"
-	"fmt"
+	"encoding/hex"
 	"hash"
 	"io"
 	"log/slog"
@@ -76,7 +76,7 @@ func (watch *Watch) fsUpdateHandle(event fsnotify.Event) {
 		}); err != nil {
 			panic(err)
 		}
-		slog.Debug("fsnotify.Create", "fileName", event.Name, "fileHash", fmt.Sprintf("%x", fileHash))
+		slog.Debug("fsnotify.Create", "fileName", event.Name, "fileHash", hex.EncodeToString(fileHash))
 
 	case event.Has(fsnotify.Write):
 		debounce.New(2 * time.Second)(func() {
@@ -93,7 +93,7 @@ func (watch *Watch) fsUpdateHandle(event fsnotify.Event) {
 			}); err != nil {
 				panic(err)
 			}
-			slog.Debug("fsnotify.Write", "fileName", event.Name, "fileHash", fmt.Sprintf("%x", fileHash))
+			slog.Debug("fsnotify.Write", "fileName", event.Name, "fileHash", hex.EncodeToString(fileHash))
 		})
 
 	case event.Has(fsnotify.Remove):
@@ -127,7 +127,7 @@ func (watch *Watch) fsUpdateHandle(event fsnotify.Event) {
 		}); err != nil {
 			panic(err)
 		}
-		slog.Debug("fsnotify.Rename", "fileName", event.Name, "fileHash", fmt.Sprintf("%x", fileHash))
+		slog.Debug("fsnotify.Rename", "fileName", event.Name, "fileHash", hex.EncodeToString(fileHash))
 	}
 	// other events are do not change file structure, so no need to update the db
 }

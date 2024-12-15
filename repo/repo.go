@@ -2,6 +2,7 @@ package repo
 
 import (
 	"database/sql"
+	"encoding/hex"
 	"fmt"
 	"log/slog"
 
@@ -92,7 +93,7 @@ func (repo *Repo) debugSelectAndPrint(opName string) {
 	for rows.Next() {
 		var id int
 		var fsPath string
-		var sha1 string
+		sha1 := make([]byte, 20, 20)
 
 		if err = rows.Scan(&id, &fsPath, &sha1); err != nil {
 			slog.Debug("can't display the result for row", "err", err)
@@ -103,7 +104,7 @@ func (repo *Repo) debugSelectAndPrint(opName string) {
 			"opName", opName,
 			"id", id,
 			"fsPath", fsPath,
-			"sha1", fmt.Sprintf("%x", sha1),
+			"sha1", hex.EncodeToString(sha1),
 		)
 	}
 
