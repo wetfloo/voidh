@@ -31,6 +31,19 @@ func ReadUint32(input io.ByteReader) (uint32, error) {
 	return binary.BigEndian.Uint32(out[:]), nil
 }
 
+// Try to read uint32 from input, consuming 4 bytes. Little endian
+func ReadUint32LE(input io.ByteReader) (uint32, error) {
+	var out [4]byte
+	for i, _ := range out {
+		b, err := input.ReadByte()
+		if err != nil {
+			return 0, err
+		}
+		out[i] = b
+	}
+	return binary.LittleEndian.Uint32(out[:]), nil
+}
+
 // Try to read uint24 from input, consuming 3 bytes. Big endian
 func ReadUint24(input io.ByteReader) (uint32, error) {
 	var out [4]byte

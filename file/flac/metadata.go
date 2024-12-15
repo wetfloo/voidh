@@ -11,6 +11,14 @@ import (
 type MetadataBlockType byte
 type PicType uint32
 
+type VorbisCommentStructureError struct {
+	OffendingComment string
+}
+
+func (err VorbisCommentStructureError) Error() string {
+	return fmt.Sprintf("invalid comment structure: %s", err.OffendingComment)
+}
+
 const (
 	MetadataBlockTypeStreamInfo MetadataBlockType = iota
 	MetadataBlockTypePadding
@@ -74,7 +82,12 @@ type SeekPoint struct {
 }
 
 type VorbisComment struct {
-	Bytes []byte // TODO
+	Data []VorbisCommentData
+}
+
+type VorbisCommentData struct {
+	Name  string
+	Value string
 }
 
 type Cuesheet struct {
@@ -306,18 +319,63 @@ func readSeekTable(input io.ByteReader, l uint32) (util.ReadResult[SeekTable], e
 func readVorbisComment(input io.ByteReader, l uint32) (util.ReadResult[VorbisComment], error) {
 	result := util.ReadResult[VorbisComment]{
 		Value: VorbisComment{
-			Bytes: []byte{},
+			Data: []VorbisCommentData{},
 		},
 	}
 
-	for result.ReadBytes() < uint64(l) {
+	vendorLen, err := util.ReadUint32LE(input)
+	if err != nil {
+		return result, err
+	}
+	result.AddReadBytes(4)
+
+	var vendorStrBuilder strings.Builder
+	for i := uint32(0); i < vendorLen; i += 1 {
 		b, err := input.ReadByte()
 		if err != nil {
 			return result, err
 		}
 		result.AddReadBytes(1)
-		result.Value.Bytes = append(result.Value.Bytes, b)
+		vendorStrBuilder.WriteByte(b)
 	}
+
+	userCommentListLen, err := util.ReadUint32LE(input)
+	if err != nil {
+		return result, err
+	}
+	result.AddReadBytes(4)
+
+	for i := uint32(0); i < userCommentListLen; i += 1 {
+		commentLen, err := util.ReadUint32LE(input)
+		if err != nil {
+			return result, err
+		}
+		result.AddReadBytes(4)
+
+		var commentBuilder strings.Builder
+		for j := uint32(0); j < commentLen; j += 1 {
+			b, err := input.ReadByte()
+			if err != nil {
+				return result, err
+			}
+			result.AddReadBytes(1)
+			commentBuilder.WriteByte(b)
+		}
+
+		comment := commentBuilder.String()
+		kv := strings.SplitN(comment, "=", 2)
+		if len(kv) != 2 {
+			return result, VorbisCommentStructureError{OffendingComment: comment}
+		}
+
+		result.Value.Data = append(result.Value.Data, VorbisCommentData{
+			Name:  kv[0],
+			Value: kv[1],
+		})
+	}
+
+	// TODO: framing bit in vorbis comment spec is responsible for something
+	// Apparently, if it's not set, we should return err, but how do we do that?
 
 	result.AssertReadBytesEq(uint64(l))
 
