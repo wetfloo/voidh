@@ -28,7 +28,10 @@ func TestReadAll(t *testing.T) {
 		f, err := os.Open(dir + item)
 		assert.Nil(t, err)
 
-		stream, err := flac.ReadStream(f)
+		stream, err := flac.ReadStream(f, flac.ReadCfg{
+			ReadMetadata: true,
+			ReadFrames:   false,
+		})
 		assert.Nil(t, err)
 		assert.Greater(t, len(stream.Metadata), 0)
 		if len(stream.Metadata) > 0 {
@@ -41,7 +44,10 @@ func TestDataSubset56JpgPicture(t *testing.T) {
 	f, err := os.Open(baseDir + "subset/56 - JPG PICTURE.flac")
 	assert.Nil(t, err)
 
-	stream, err := flac.ReadStream(f)
+	stream, err := flac.ReadStream(f, flac.ReadCfg{
+		ReadMetadata: true,
+		ReadFrames:   false,
+	})
 	assert.Nil(t, err)
 
 	assert.GreaterOrEqual(t, len(stream.Metadata), 2) // one for StreamInfo, one for Picture
