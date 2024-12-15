@@ -11,11 +11,21 @@ import (
 type MetadataBlockType byte
 type PicType uint32
 
-type VorbisCommentStructureError struct {
+var InvalidMetadataBlockTypeErr = fmt.Errorf("encountered invalid metadata block type")
+
+type InvalidTracksNumErr struct {
+	Num uint8
+}
+
+func (err InvalidTracksNumErr) Error() string {
+	return fmt.Sprintf("invalid amount of tracks, expected to be at least 1, but got %d", err.Num)
+}
+
+type VorbisCommentStructureErr struct {
 	OffendingComment string
 }
 
-func (err VorbisCommentStructureError) Error() string {
+func (err VorbisCommentStructureErr) Error() string {
 	return fmt.Sprintf("invalid comment structure: %s", err.OffendingComment)
 }
 
@@ -187,7 +197,7 @@ func readMetadataBlock(input *bufio.Reader) (any, bool, error) {
 		result.AssertReadBytesEq(uint64(metadataFollowLen))
 		return result.Value, isLast, err
 	case byte(MetadataTypeInvalid):
-		return nil, isLast, fmt.Errorf("TODO: invalid metadata block")
+		return nil, isLast, InvalidMetadataBlockTypeErr
 	}
 
 	return nil, isLast, nil
@@ -365,7 +375,7 @@ func readVorbisComment(input io.ByteReader, l uint32) (util.ReadResult[VorbisCom
 		comment := commentBuilder.String()
 		kv := strings.SplitN(comment, "=", 2)
 		if len(kv) != 2 {
-			return result, VorbisCommentStructureError{OffendingComment: comment}
+			return result, VorbisCommentStructureErr{OffendingComment: comment}
 		}
 
 		result.Value.Data = append(result.Value.Data, VorbisCommentData{
@@ -422,11 +432,14 @@ func readCuesheet(input *bufio.Reader) (util.ReadResult[Cuesheet], error) {
 	result.AddReadBytes(258)
 
 	tracksNum, err := util.ReadUint8(input)
-	// TODO: check that tracksNum is >= 1
 	if err != nil {
 		return result, err
 	}
 	result.AddReadBytes(1)
+
+	if tracksNum <= 1 {
+		return result, InvalidTracksNumErr{Num: tracksNum}
+	}
 
 	// 	result.AssertReadBytesEq(uint64(l)) // TODO
 
